@@ -413,7 +413,7 @@ def ticker_tape(df):
     items = []
     for t, r in df.head(10).iterrows():
         # Use 1-month stock price growth for ticker tape (more stable)
-        growth_1m = r.get('momentum_1m', 0)
+        growth_1m = r.get('momentum_1m', 0)  # This is actually stock price growth percentage
         cls = "c-up" if growth_1m>=0 else "c-down"
         items.append(f"<span class='badge'>{t}</span> <span class='{cls}'>{growth_1m:+.1f}%</span>")
     html = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;".join(items)
@@ -498,6 +498,7 @@ if df is not None and not df.empty:
 
         for i, (ticker, row) in enumerate(df.head(10).iterrows(), 1):
             score = row['score']
+            # This is actual stock price growth percentage (not momentum)
             growth_1m = row['momentum_1m']
             sharpe = row.get('sharpe_ratio', 0)
             company_name = row.get('name', ticker)
@@ -794,8 +795,9 @@ if df is not None and not df.empty:
                     st.markdown('<div class="section-title">OVERVIEW</div>', unsafe_allow_html=True)
                     
                     score = stock_data.get('score', 0)
-                    growth_1m = stock_data.get('momentum_1m', 0)
-                    growth_3m = stock_data.get('momentum_3m', 0)
+                                         # These are actual stock price growth percentages from backend
+                     growth_1m = stock_data.get('momentum_1m', 0)  # 1-month price growth %
+                     growth_3m = stock_data.get('momentum_3m', 0)  # 3-month price growth %
                     price = stock_data.get('price', 0)
                     
                     # Determine sentiment

@@ -12,10 +12,10 @@ echo "📦 Installing dependencies..."
 pip install --no-cache-dir -r requirements.txt
 
 # Verify installation
-echo "✅ Dependencies installed successfully"
+echo "Dependencies installed successfully"
 
 # Test imports
-echo "🧪 Testing imports..."
-python -c "import yfinance, fastapi, streamlit, pandas, numpy; print('✅ All imports successful')"
+echo "Testing imports..."
+python -c "import yfinance, fastapi, streamlit, pandas, numpy; print('All imports successful')"
 
-echo "🎉 Build complete!"
+echo "Build complete!"

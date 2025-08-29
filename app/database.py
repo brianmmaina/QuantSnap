@@ -243,7 +243,7 @@ class Database:
                     'timestamp': datetime.now().isoformat()
                 }
                 
-                logger.info(f"✅ Live price for {ticker}: ${current_price} ({change_pct:+.2f}%)")
+                logger.info(f"Live price for {ticker}: ${current_price} ({change_pct:+.2f}%)")
                 
             except Exception as e:
                 logger.error(f"Error fetching live price for {ticker}: {e}")
