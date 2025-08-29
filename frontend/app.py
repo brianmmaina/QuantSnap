@@ -310,6 +310,39 @@ st.markdown("""
 """, unsafe_allow_html=True)
 st.write("")
 
+# Methodology Section
+st.markdown("""
+<div class="card" style="margin-bottom: 20px;">
+  <div class="section-title">📊 RANKING METHODOLOGY</div>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 16px;">
+    <div>
+      <div style="font-weight: 700; color: var(--accent); margin-bottom: 8px;">🎯 SCORING ALGORITHM</div>
+      <div style="font-size: 14px; line-height: 1.5; color: var(--text);">
+        <strong>Composite Score =</strong><br>
+        • 1M Growth (30% weight)<br>
+        • 3M Growth (25% weight)<br>
+        • Sharpe Ratio (20% weight)<br>
+        • Volume Factor (10% weight)<br>
+        • Market Cap (10% weight)<br>
+        • P/E Ratio (5% weight)
+      </div>
+    </div>
+    <div>
+      <div style="font-weight: 700; color: var(--accent); margin-bottom: 8px;">📈 DATA SOURCES</div>
+      <div style="font-size: 14px; line-height: 1.5; color: var(--text);">
+        • <strong>Yahoo Finance:</strong> Real-time prices & fundamentals<br>
+        • <strong>500+ Stocks:</strong> Comprehensive market coverage<br>
+        • <strong>Daily Updates:</strong> Fresh data every session<br>
+        • <strong>Auto-adjusted:</strong> Splits & dividends included
+      </div>
+    </div>
+  </div>
+  <div style="font-size: 13px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 12px;">
+    <strong>Note:</strong> Rankings are based on quantitative factors only. Past performance does not guarantee future results.
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
 # Live Ticker Tape Function
 def ticker_tape(df):
     items = []
@@ -411,7 +444,7 @@ if df is not None and not df.empty:
             with cols[0] if i <= 5 else cols[1]:
                 st.markdown(f"""
                 <a href="https://finance.yahoo.com/quote/{ticker}" target="_blank" style="text-decoration: none; color: inherit;">
-                    <div class="stock-card" style="cursor: pointer; transition: background-color 0.2s;">
+                    <div class="stock-card" style="cursor: pointer; transition: background-color 0.2s; margin-bottom: 16px;">
                       <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
                         <div class="badge" style="font-size: 14px; font-weight: 800;">#{i}</div>
                         <div style="font-weight: 700; font-size: 16px; color: var(--accent);">{ticker}</div>
