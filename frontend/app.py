@@ -21,27 +21,39 @@ bloomberg_template = dict(
     layout=dict(
         paper_bgcolor="#0B0F10",
         plot_bgcolor="#0B0F10",
-        font=dict(family="JetBrains Mono, Menlo, monospace", color="#D7E1E8", size=13),
+        font=dict(family="JetBrains Mono, Menlo, monospace", color="#FFFFFF", size=13),
         xaxis=dict(
-            gridcolor="#1C2328", 
-            zerolinecolor="#1C2328", 
-            linecolor="#2A3338", 
-            tickcolor="#2A3338",
-            tickfont=dict(color="#D7E1E8")
+            gridcolor="#2A3338", 
+            zerolinecolor="#2A3338", 
+            linecolor="#4A5568", 
+            tickcolor="#4A5568",
+            tickfont=dict(color="#FFFFFF", size=11),
+            title=dict(font=dict(color="#FFFFFF", size=12))
         ),
         yaxis=dict(
-            gridcolor="#1C2328", 
-            zerolinecolor="#1C2328", 
-            linecolor="#2A3338", 
-            tickcolor="#2A3338",
-            tickfont=dict(color="#D7E1E8")
+            gridcolor="#2A3338", 
+            zerolinecolor="#2A3338", 
+            linecolor="#4A5568", 
+            tickcolor="#4A5568",
+            tickfont=dict(color="#FFFFFF", size=11),
+            title=dict(font=dict(color="#FFFFFF", size=12))
         ),
-        legend=dict(bgcolor="#0B0F10", bordercolor="#2A3338", font=dict(color="#D7E1E8")),
-        margin=dict(l=40, r=30, t=40, b=40),
-        hoverlabel=dict(bgcolor="#111417", bordercolor="#2A3338", font_color="#D7E1E8"),
+        legend=dict(
+            bgcolor="#111417", 
+            bordercolor="#4A5568", 
+            font=dict(color="#FFFFFF", size=11),
+            bordercolor="#4A5568"
+        ),
+        margin=dict(l=50, r=30, t=50, b=50),
+        hoverlabel=dict(
+            bgcolor="#1A202C", 
+            bordercolor="#4A5568", 
+            font_color="#FFFFFF",
+            font_size=12
+        ),
         colorway=["#00E676", "#00C2FF", "#FFB000", "#FF4D4D", "#A78BFA", "#64FFDA"],
-        title=dict(font=dict(color="#D7E1E8")),
-        annotations=[dict(font=dict(color="#D7E1E8"))]
+        title=dict(font=dict(color="#FFFFFF", size=16)),
+        annotations=[dict(font=dict(color="#FFFFFF"))]
     )
 )
 pio.templates["bloomberg"] = bloomberg_template
@@ -108,9 +120,38 @@ def fetch_news(ticker=None, limit=3):
                         description = article.get('description', '').lower()
                         content = f"{title} {description}"
                         
-                        if any(word in content for word in ['up', 'gain', 'rise', 'positive', 'strong', 'beat']):
+                        # Enhanced sentiment analysis with comprehensive word lists
+                        positive_words = [
+                            'up', 'gain', 'rise', 'positive', 'strong', 'beat', 'surge', 'jump', 'climb', 'soar',
+                            'rally', 'boost', 'increase', 'growth', 'profit', 'earnings', 'revenue', 'success',
+                            'exceed', 'outperform', 'bullish', 'optimistic', 'favorable', 'promising', 'robust',
+                            'solid', 'excellent', 'outstanding', 'impressive', 'record', 'high', 'peak', 'breakthrough',
+                            'innovation', 'expansion', 'acquisition', 'merger', 'partnership', 'launch', 'upgrade',
+                            'improve', 'enhance', 'strengthen', 'accelerate', 'momentum', 'recovery', 'rebound',
+                            'turnaround', 'revival', 'resurgence', 'thrive', 'flourish', 'prosper', 'excel',
+                            'dominate', 'lead', 'outpace', 'overtake', 'surpass', 'outstrip', 'outshine'
+                        ]
+                        
+                        negative_words = [
+                            'down', 'fall', 'drop', 'negative', 'weak', 'miss', 'decline', 'plunge', 'crash',
+                            'tumble', 'slump', 'dip', 'slide', 'sink', 'collapse', 'downturn', 'recession',
+                            'loss', 'deficit', 'debt', 'bankruptcy', 'default', 'failure', 'struggle', 'challenge',
+                            'risk', 'volatility', 'uncertainty', 'concern', 'worry', 'fear', 'anxiety', 'stress',
+                            'pressure', 'tension', 'conflict', 'dispute', 'litigation', 'investigation', 'probe',
+                            'scandal', 'controversy', 'criticism', 'backlash', 'boycott', 'protest', 'strike',
+                            'layoff', 'firing', 'resignation', 'exit', 'departure', 'replacement', 'restructure',
+                            'cut', 'reduce', 'decrease', 'shrink', 'contract', 'retreat', 'withdraw', 'abandon',
+                            'cancel', 'delay', 'postpone', 'suspend', 'halt', 'stop', 'end', 'terminate'
+                        ]
+                        
+                        # Count positive and negative words
+                        positive_count = sum(1 for word in positive_words if word in content)
+                        negative_count = sum(1 for word in negative_words if word in content)
+                        
+                        # Determine sentiment based on word frequency
+                        if positive_count > negative_count and positive_count > 0:
                             sentiment = 'positive'
-                        elif any(word in content for word in ['down', 'fall', 'drop', 'negative', 'weak', 'miss']):
+                        elif negative_count > positive_count and negative_count > 0:
                             sentiment = 'negative'
                         else:
                             sentiment = 'neutral'
@@ -319,13 +360,72 @@ html, body, [data-testid="stAppViewContainer"]{
   background: var(--panel) !important;
 }
 
-/* Ensure chart elements are dark */
+/* Ensure chart elements are dark with better contrast */
 .js-plotly-plot .plotly .main-svg {
   background: var(--panel) !important;
 }
 
 .js-plotly-plot .plotly .bg {
   background: var(--panel) !important;
+}
+
+/* Enhanced chart text readability */
+.js-plotly-plot .plotly text {
+  fill: #FFFFFF !important;
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
+.js-plotly-plot .plotly .gtitle text {
+  fill: #FFFFFF !important;
+  font-weight: 700 !important;
+}
+
+.js-plotly-plot .plotly .xtick text,
+.js-plotly-plot .plotly .ytick text {
+  fill: #FFFFFF !important;
+  font-size: 11px !important;
+}
+
+.js-plotly-plot .plotly .xaxis-title text,
+.js-plotly-plot .plotly .yaxis-title text {
+  fill: #FFFFFF !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+/* Remove dark loading overlay */
+.stSpinner > div {
+  background: transparent !important;
+}
+
+.stSpinner > div > div {
+  background: transparent !important;
+}
+
+/* Custom loading spinner styling */
+.stSpinner {
+  background: rgba(0, 0, 0, 0.1) !important;
+  backdrop-filter: blur(2px) !important;
+}
+
+.stSpinner > div > div > div {
+  border-color: var(--accent) !important;
+  border-top-color: transparent !important;
+}
+
+/* Remove Streamlit's default overlay */
+.stApp > div[data-testid="stDecoration"] {
+  display: none !important;
+}
+
+/* Custom loading text */
+.stSpinner > div > div > div::after {
+  content: "Loading..." !important;
+  color: var(--accent) !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  margin-top: 20px !important;
 }
 
 #MainMenu, header, footer{ visibility: hidden; }
@@ -446,8 +546,8 @@ if 'analysis_search' not in st.session_state:
     st.session_state.analysis_search = ""
 
 # Data Loading from API
-with st.spinner("Loading data from database..."):
-    df = get_rankings_from_api("world_top_stocks", 10)
+st.markdown('<div style="text-align: center; color: var(--accent); font-family: JetBrains Mono; font-weight: 600; margin: 20px 0;">Loading data from database...</div>', unsafe_allow_html=True)
+df = get_rankings_from_api("world_top_stocks", 10)
 
 if df is not None and not df.empty:
     # Show data status
@@ -566,8 +666,8 @@ if df is not None and not df.empty:
             # Validate stock symbol
             if chart_stock:
                 # Fetch data from backend API
-                with st.spinner(f"Fetching data for {chart_stock}..."):
-                    try:
+                st.markdown(f'<div style="text-align: center; color: var(--accent); font-family: JetBrains Mono; font-weight: 600; margin: 10px 0;">Fetching data for {chart_stock}...</div>', unsafe_allow_html=True)
+                try:
                         chart_response = api_request(f"/chart/{chart_stock}?period=1y")
                         if chart_response and 'data' in chart_response:
                             # Convert chart data to pandas series for compatibility
@@ -783,8 +883,15 @@ if df is not None and not df.empty:
             search_ticker = st.session_state.analysis_search
             
             # Get stock data from API
-            with st.spinner(f"Analyzing {search_ticker}..."):
-                stock_data = get_stock_data_from_api(search_ticker)
+            st.markdown(f'<div style="text-align: center; color: var(--accent); font-family: JetBrains Mono; font-weight: 600; margin: 10px 0;">Analyzing {search_ticker}...</div>', unsafe_allow_html=True)
+            stock_data = get_stock_data_from_api(search_ticker)
+            
+            # Get AI analysis
+            ai_analysis = None
+            if stock_data:
+                ai_response = api_request(f"/analyze/{search_ticker}")
+                if ai_response and 'ai_analysis' in ai_response:
+                    ai_analysis = ai_response['ai_analysis']
                 
             if stock_data:
                 # Display analysis in organized layout
@@ -800,26 +907,31 @@ if df is not None and not df.empty:
                     growth_3m = stock_data.get('momentum_3m', 0)  # 3-month price growth %
                     price = stock_data.get('price', 0)
                     
-                    # Determine sentiment
-                    if score > 1.0:
+                    # Convert score to 0-100 scale and determine sentiment
+                    score_100 = min(max(score * 10, 0), 100)  # Scale to 0-100, cap at 100
+                    
+                    if score_100 > 80:
                         sentiment = "very bullish"
                         recommendation = "Strong Buy"
-                    elif score > 0.5:
+                    elif score_100 > 60:
                         sentiment = "bullish"
                         recommendation = "Buy"
-                    elif score > 0:
+                    elif score_100 > 40:
                         sentiment = "neutral"
                         recommendation = "Hold"
-                    else:
+                    elif score_100 > 20:
                         sentiment = "bearish"
                         recommendation = "Sell"
+                    else:
+                        sentiment = "very bearish"
+                        recommendation = "Strong Sell"
                     
                     st.markdown(f"""
                     **{search_ticker}** ({stock_data.get('name', search_ticker)}) shows **{sentiment}** signals.
                     
                     **Key Metrics:**
                     - **Current Price:** ${price:.2f}
-                    - **AI Score:** {score:.3f}
+                    - **AI Score:** {score_100:.1f}/100
                     - **1-Month Stock Growth:** {growth_1m:.1%}
                     - **3-Month Stock Growth:** {growth_3m:.1%}
                     
@@ -844,6 +956,17 @@ if df is not None and not df.empty:
                     **Market Position:** {'Outperforming' if growth_1m > 0.1 else 'In-line' if growth_1m > -0.05 else 'Underperforming'}
                     """)
                     st.markdown('</div>', unsafe_allow_html=True)
+                
+                # AI Analysis section
+                if ai_analysis and ai_analysis != "AI analysis disabled - no API key configured" and ai_analysis != "AI analysis quota exceeded for today":
+                    st.markdown(f'<div class="section-title">AI ANALYSIS</div>', unsafe_allow_html=True)
+                    st.markdown(f"""
+                    <div class="analysis-section">
+                        <div style="font-size: 14px; line-height: 1.6; color: var(--text);">
+                            {ai_analysis}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
                 
                 # Stock-specific news section
                 st.markdown(f'<div class="section-title">{search_ticker} NEWS</div>', unsafe_allow_html=True)

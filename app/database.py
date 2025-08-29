@@ -172,15 +172,25 @@ class Database:
             dividend_yield = info.get('dividendYield', 0)
             beta = info.get('beta', 1.0)
             
-            # Enhanced scoring algorithm
+            # Enhanced scoring algorithm prioritizing actual performance
             score = (
-                            (momentum_1m * 0.3) +      # 1M stock price growth (30% weight)
-            (momentum_3m * 0.25) +     # 3M stock price growth (25% weight)
-                (sharpe_ratio * 2.0) +     # Sharpe ratio (20% weight)
-                (volume_avg_20d / 1000000 * 0.1) + # Volume factor (10% weight)
-                (market_cap / 1e12 * 0.1) + # Market cap factor (10% weight)
+                (momentum_1m * 0.4) +      # 1M stock price growth (40% weight) - PRIMARY FACTOR
+                (momentum_3m * 0.3) +      # 3M stock price growth (30% weight) - SECONDARY FACTOR
+                (sharpe_ratio * 0.5) +     # Sharpe ratio (15% weight) - REDUCED WEIGHT
+                (volume_avg_20d / 1000000 * 0.05) + # Volume factor (5% weight)
+                (market_cap / 1e12 * 0.05) + # Market cap factor (5% weight)
                 (1 / (pe_ratio + 1) * 0.05) # P/E factor (5% weight)
             )
+            
+            # Apply minimum performance threshold - penalize stocks with poor recent performance
+            if momentum_1m < -10:  # If 1M growth is less than -10%
+                score *= 0.5  # Reduce score by 50%
+            elif momentum_1m < 0:  # If 1M growth is negative but not too bad
+                score *= 0.8  # Reduce score by 20%
+            
+            # Debug logging for top stocks
+            if ticker in ['NVDA', 'INTC', 'AMD', 'GOOGL', 'AAPL', 'TSLA', 'MSFT']:
+                logger.info(f"DEBUG {ticker}: 1M={momentum_1m:.2f}%, 3M={momentum_3m:.2f}%, Sharpe={sharpe_ratio:.2f}, Score={score:.3f}")
             
             return {
                 'ticker': ticker,
