@@ -82,6 +82,33 @@ def get_stock_data_from_api(ticker: str) -> Dict:
     """Get stock data from API"""
     return api_request(f"/stock/{ticker}")
 
+@st.cache_data(ttl=600)
+def fetch_stock_data(symbol: str):
+    """Fetch stock data with caching"""
+    try:
+        import yfinance as yf
+        ticker = yf.Ticker(symbol)
+        hist = ticker.history(period="2y", auto_adjust=True)
+        
+        if hist.empty:
+            return None, None
+        
+        # Get company info safely
+        try:
+            info = ticker.fast_info
+            company_name = info.get('longName', info.get('shortName', symbol))
+        except:
+            try:
+                info = ticker.get_info()
+                company_name = info.get('longName', info.get('shortName', symbol))
+            except:
+                company_name = symbol
+        
+        return hist, company_name
+        
+    except Exception as e:
+        return None, None
+
 # News fetching function
 def fetch_news(ticker=None, limit=3):
     """Fetch financial news"""
@@ -589,6 +616,8 @@ if 'chart_search' not in st.session_state:
     st.session_state.chart_search = "AAPL"
 if 'analysis_search' not in st.session_state:
     st.session_state.analysis_search = ""
+if 'chart_period' not in st.session_state:
+    st.session_state.chart_period = "3M"
 
 
 df = get_rankings_from_api("world_top_stocks", 10)
@@ -601,6 +630,10 @@ if df is not None and not df.empty:
     # Set ticker as index for compatibility
     if 'ticker' in df.columns:
         df = df.set_index('ticker')
+    
+    # Ensure we have the best stocks by sorting by score (highest first)
+    if 'score' in df.columns:
+        df = df.sort_values('score', ascending=False)
     
     if df is not None and not df.empty:
         # Live Ticker Tape
@@ -642,6 +675,9 @@ if df is not None and not df.empty:
         try:
             # Get top 10 stocks from AI rankings and fetch live data using same method as live stock prices
             top_stocks = df.head(10).index.tolist()
+            
+
+            
             tickers_str = ','.join(top_stocks)
             
             # Fetch live data using the same API endpoint as live stock prices
@@ -707,210 +743,191 @@ if df is not None and not df.empty:
         
         neon_divider("MARKET CHARTS")
         
-        # Bloomberg-style Price Chart with Time Period Selection
-        try:
-            # Stock search bar for any stock
-            col1, col2 = st.columns([2, 1])
-            with col1:
-                chart_stock = st.text_input(
-                    "Enter any stock symbol for chart (e.g., AAPL, TSLA, GOOGL)",
-                    value=st.session_state.chart_search,
-                    placeholder="AAPL",
-                    help="Enter any valid stock symbol to display its price chart",
-                    key="chart_input"
+        # Stock search bar for any stock
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            chart_stock = st.text_input(
+                "Enter any stock symbol for chart (e.g., AAPL, TSLA, GOOGL)",
+                value=st.session_state.chart_search,
+                placeholder="AAPL",
+                help="Enter any valid stock symbol to display its price chart",
+                key="chart_input"
+            )
+        
+        # Update session state when input changes
+        if chart_stock:
+            chart_stock = chart_stock.upper().strip()
+            if chart_stock != st.session_state.chart_search:
+                st.session_state.chart_search = chart_stock
+        
+        # Validate stock symbol and fetch data
+        if chart_stock:
+            # Fetch data with caching
+            hist, company_name = fetch_stock_data(chart_stock)
+            
+            if hist is None or hist.empty:
+                st.error(f"Could not fetch data for {chart_stock}. Please check the stock symbol.")
+                st.stop()
+            
+            # Sanitize the price series
+            price_series = hist["Close"].dropna()
+            price_series.index = pd.to_datetime(price_series.index).tz_localize(None)
+            price_series = price_series.resample("B").last().ffill()
+            
+            if len(price_series) < 3:
+                st.error("Insufficient data for charting")
+                st.stop()
+            
+            # Period selection with stateful control
+            period_options = ["1M", "3M", "6M", "1Y", "MAX"]
+            selected_period_key = st.selectbox(
+                "Select Time Period",
+                options=period_options,
+                index=period_options.index(st.session_state.chart_period),
+                key="period_selector"
+            )
+            
+            # Update session state
+            st.session_state.chart_period = selected_period_key
+            
+            # Map period to days
+            period_map = {
+                "1M": 21,
+                "3M": 63,
+                "6M": 126,
+                "1Y": 252,
+                "MAX": len(price_series)
+            }
+            
+            selected_period = period_map[selected_period_key]
+            period_name = {
+                "1M": "1 Month",
+                "3M": "3 Months", 
+                "6M": "6 Months",
+                "1Y": "1 Year",
+                "MAX": "Max"
+            }[selected_period_key]
+            
+            # Slice data by selected period
+            chart_data = price_series.tail(selected_period)
+            
+            if len(chart_data) < 3:
+                st.error("Insufficient data for selected period")
+                st.stop()
+            
+            # Create Bloomberg-style price chart
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=chart_data.index,
+                y=chart_data.values,
+                mode='lines',
+                line=dict(
+                    color='#00FF88', 
+                    width=4,
+                    shape='spline'
+                ),
+                name=f'{chart_stock} Price',
+                hovertemplate='<b>%{x}</b><br>Price: $%{y:.2f}<extra></extra>',
+                fill='tonexty',
+                fillcolor='rgba(0, 255, 136, 0.15)',
+                connectgaps=True
+            ))
+            
+            # Create title with company name if available
+            title_text = f"{chart_stock} Price Chart - {period_name}"
+            if company_name and company_name != chart_stock:
+                title_text = f"{chart_stock} ({company_name}) - {period_name}"
+            
+            fig.update_layout(
+                title=dict(
+                    text=title_text,
+                    font=dict(color='var(--text, #E6EDF3)', size=18, family='JetBrains Mono, Menlo, monospace')
+                ),
+                xaxis_title=dict(
+                    text="Date",
+                    font=dict(color='var(--text, #E6EDF3)', size=14)
+                ),
+                yaxis_title=dict(
+                    text="Price ($)",
+                    font=dict(color='var(--text, #E6EDF3)', size=14)
+                ),
+                height=400,
+                showlegend=False,
+                hovermode='x unified',
+                plot_bgcolor='#0B0F10',
+                paper_bgcolor='#0B0F10',
+                xaxis=dict(
+                    type="date",
+                    gridcolor='#2A3338',
+                    zerolinecolor='#2A3338',
+                    linecolor='#4A5568',
+                    tickcolor='#4A5568',
+                    tickfont=dict(color='var(--text, #E6EDF3)', size=11),
+                    title=dict(font=dict(color='var(--text, #E6EDF3)', size=12))
+                ),
+                yaxis=dict(
+                    gridcolor='#2A3338',
+                    zerolinecolor='#2A3338',
+                    linecolor='#4A5568',
+                    tickcolor='#4A5568',
+                    tickfont=dict(color='var(--text, #E6EDF3)', size=11),
+                    title=dict(font=dict(color='var(--text, #E6EDF3)', size=12))
+                ),
+                margin=dict(l=50, r=30, t=50, b=50),
+                hoverlabel=dict(
+                    bgcolor='#1A202C',
+                    bordercolor='#4A5568',
+                    font_color='var(--text, #E6EDF3)',
+                    font_size=12
                 )
+            )
             
-            # Update session state when input changes
-            if chart_stock:
-                chart_stock = chart_stock.upper().strip()
-                if chart_stock != st.session_state.chart_search:
-                    st.session_state.chart_search = chart_stock
+            st.plotly_chart(fig, use_container_width=True, theme=None)
             
-            # Validate stock symbol
-            if chart_stock:
-
-
-                try:
-                    import yfinance as yf
-                    ticker = yf.Ticker(chart_stock)
-                    
-                    # Get historical data
-                    hist = ticker.history(period="2y", auto_adjust=True)
-                    
-                    if hist.empty or len(hist) < 30:
-                        st.error(f"Could not fetch data for {chart_stock}. Please check the stock symbol.")
-                        price_series = None
-                    else:
-                        # Use Close prices
-                        price_series = hist['Close']
-                        
-                        # Get company name
-                        info = ticker.info
-                        company_name = info.get('longName', info.get('shortName', ""))
-                        
-                except Exception as e:
-                    st.error(f"Could not fetch data for {chart_stock}. Please check the stock symbol.")
-                    price_series = None
-                    company_name = ""
-                
-                if price_series is not None and len(price_series) > 30:
-                    # Ensure we have valid data for charting
-                    if price_series.isnull().any():
-                        st.markdown('<div class="alert alert-warning">Chart data contains missing values</div>', unsafe_allow_html=True)
-                    else:
-                        # Time period selection
-                        col1, col2, col3, col4, col5 = st.columns(5)
-                        with col1:
-                            period_1m = st.button("1M", key="1m", use_container_width=True)
-                        with col2:
-                            period_3m = st.button("3M", key="3m", use_container_width=True)
-                        with col3:
-                            period_6m = st.button("6M", key="6m", use_container_width=True)
-                        with col4:
-                            period_1y = st.button("1Y", key="1y", use_container_width=True)
-                        with col5:
-                            period_max = st.button("MAX", key="max", use_container_width=True)
-                        
-                        # Determine selected period
-                        if period_1m:
-                            selected_period = 21
-                            period_name = "1 Month"
-                        elif period_3m:
-                            selected_period = 63
-                            period_name = "3 Months"
-                        elif period_6m:
-                            selected_period = 126
-                            period_name = "6 Months"
-                        elif period_1y:
-                            selected_period = 252
-                            period_name = "1 Year"
-                        elif period_max:
-                            selected_period = len(price_series)
-                            period_name = "Max"
-                        else:
-                            selected_period = 63
-                            period_name = "3 Months"
-                        
-                        # Create Bloomberg-style price chart
-                        chart_data = price_series.tail(selected_period)
-                    
-                    fig = go.Figure()
-                    fig.add_trace(go.Scatter(
-                        x=chart_data.index,
-                        y=chart_data.values,
-                        mode='lines',
-                        line=dict(
-                            color='#00FF88', 
-                            width=4,  # Even thicker line for better visibility
-                            shape='spline'  # Smooth line for better appearance
-                        ),
-                        name=f'{chart_stock} Price',
-                        hovertemplate='<b>%{x}</b><br>Price: $%{y:.2f}<extra></extra>',
-                        fill='tonexty',  # Add subtle fill below the line
-                        fillcolor='rgba(0, 255, 136, 0.15)'  # Slightly more visible fill
-                    ))
-                    
-
-                    
-                    # Create title with company name if available
-                    title_text = f"{chart_stock} Price Chart - {period_name}"
-                    if company_name:
-                        title_text = f"{chart_stock} ({company_name}) - {period_name}"
-                    
-                    fig.update_layout(
-                        title=dict(
-                            text=title_text,
-                            font=dict(color='#FFFFFF', size=18, family='JetBrains Mono, Menlo, monospace')
-                        ),
-                        xaxis_title=dict(
-                            text="Date",
-                            font=dict(color='#FFFFFF', size=14)
-                        ),
-                        yaxis_title=dict(
-                            text="Price ($)",
-                            font=dict(color='#FFFFFF', size=14)
-                        ),
-                        height=400,
-                        showlegend=False,
-                        hovermode='x unified',
-                        plot_bgcolor='#0B0F10',  # Dark background matching the theme
-                        paper_bgcolor='#0B0F10',  # Dark background matching the theme
-                        xaxis=dict(
-                            gridcolor='#2A3338',  # Visible grid lines
-                            zerolinecolor='#2A3338',
-                            linecolor='#4A5568',
-                            tickcolor='#4A5568',
-                            tickfont=dict(color='#FFFFFF', size=11),
-                            title=dict(font=dict(color='#FFFFFF', size=12))
-                        ),
-                        yaxis=dict(
-                            gridcolor='#2A3338',  # Visible grid lines
-                            zerolinecolor='#2A3338',
-                            linecolor='#4A5568',
-                            tickcolor='#4A5568',
-                            tickfont=dict(color='#FFFFFF', size=11),
-                            title=dict(font=dict(color='#FFFFFF', size=12))
-                        ),
-                        margin=dict(l=50, r=30, t=50, b=50),
-                        hoverlabel=dict(
-                            bgcolor='#1A202C',
-                            bordercolor='#4A5568',
-                            font_color='#FFFFFF',
-                            font_size=12
-                        )
-                    )
-                    
-                    st.plotly_chart(fig, use_container_width=True, theme=None)
-                    
-                    # Current price info
-                    current_price = chart_data.iloc[-1]
-                    start_price = chart_data.iloc[0]
-                    change = current_price - start_price
-                    change_pct = (change / start_price) * 100
-                    
-                    # Chart metrics using existing card styling
-                    col1, col2, col3, col4 = st.columns(4)
-                    
-                    with col1:
-                        st.markdown(f"""
-                        <div class="card" style="text-align: center;">
-                            <div class="c-muted" style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Current Price</div>
-                            <div style="font-size: 24px; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: var(--text);">${current_price:.2f}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    with col2:
-                        change_color = "var(--up)" if change >= 0 else "var(--down)"
-                        st.markdown(f"""
-                        <div class="card" style="text-align: center;">
-                            <div class="c-muted" style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Change</div>
-                            <div style="font-size: 24px; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: {change_color};">${change:+.2f}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    with col3:
-                        change_color = "var(--up)" if change_pct >= 0 else "var(--down)"
-                        st.markdown(f"""
-                        <div class="card" style="text-align: center;">
-                            <div class="c-muted" style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Change %</div>
-                            <div style="font-size: 24px; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: {change_color};">{change_pct:+.2f}%</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    with col4:
-                        st.markdown(f"""
-                        <div class="card" style="text-align: center;">
-                            <div class="c-muted" style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Period</div>
-                            <div style="font-size: 24px; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: var(--text);">{period_name}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        
-                else:
-                    st.markdown('<div class="alert alert-warning">Insufficient price data for chart</div>', unsafe_allow_html=True)
-            else:
-                st.markdown('<div class="alert alert-warning">Please enter a stock symbol to view chart</div>', unsafe_allow_html=True)
-        except Exception as e:
-            st.markdown(f'<div class="alert alert-warning">Could not load charts: {str(e)}</div>', unsafe_allow_html=True)
+            # Calculate metrics after chart_data is valid
+            current_price = chart_data.iloc[-1]
+            start_price = chart_data.iloc[0]
+            change = current_price - start_price
+            change_pct = (change / start_price) * 100
+            
+            # Chart metrics using existing card styling
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.markdown(f"""
+                <div class="card" style="text-align: center;">
+                    <div class="c-muted" style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Current Price</div>
+                    <div style="font-size: 24px; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: var(--text, #E6EDF3);">${current_price:.2f}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col2:
+                change_color = "var(--up, #00E676)" if change >= 0 else "var(--down, #FF4D4D)"
+                st.markdown(f"""
+                <div class="card" style="text-align: center;">
+                    <div class="c-muted" style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Change</div>
+                    <div style="font-size: 24px; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: {change_color};">${change:+.2f}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col3:
+                change_color = "var(--up, #00E676)" if change_pct >= 0 else "var(--down, #FF4D4D)"
+                st.markdown(f"""
+                <div class="card" style="text-align: center;">
+                    <div class="c-muted" style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Change %</div>
+                    <div style="font-size: 24px; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: {change_color};">{change_pct:+.2f}%</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col4:
+                st.markdown(f"""
+                <div class="card" style="text-align: center;">
+                    <div class="c-muted" style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Period</div>
+                    <div style="font-size: 24px; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: var(--text, #E6EDF3);">{period_name}</div>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="alert alert-warning">Please enter a stock symbol to view chart</div>', unsafe_allow_html=True)
         
         neon_divider("LIVE STOCK PRICES")
         
