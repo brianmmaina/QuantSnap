@@ -83,7 +83,7 @@ def get_default_weights() -> Dict[str, float]:
     Returns:
         Dictionary of default weights
     """
-    return {
+    weights = {
         # Traditional factors (67%)
         'MOM_1M': 0.20,
         'MOM_3M': 0.20,
@@ -98,6 +98,13 @@ def get_default_weights() -> Dict[str, float]:
         'Financial_Health': 0.03,  # Composite of financial metrics
         'Market_Position': 0.03,   # Composite of market metrics
         'Growth_Stability': 0.03   # Composite of growth metrics
+    }
+    
+    # Normalize weights to sum to 1.0
+    total_weight = sum(weights.values())
+    normalized_weights = {k: v / total_weight for k, v in weights.items()}
+    
+    return normalized_weights
     }
 
 
