@@ -36,9 +36,3 @@ services:
         sync: false
       - key: ENVIRONMENT
         value: production
-
-  # PostgreSQL Database
-  - type: pserv
-    name: quantsnap-db
-    env: postgresql
-    plan: free
