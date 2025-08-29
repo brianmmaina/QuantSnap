@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-QuantSnap - Beautiful Bloomberg Terminal Style UI
+QuantSnap 
 """
 
 import streamlit as st
@@ -27,16 +27,14 @@ bloomberg_template = dict(
             zerolinecolor="#1C2328", 
             linecolor="#2A3338", 
             tickcolor="#2A3338",
-            tickfont=dict(color="#D7E1E8"),
-            titlefont=dict(color="#D7E1E8")
+            tickfont=dict(color="#D7E1E8")
         ),
         yaxis=dict(
             gridcolor="#1C2328", 
             zerolinecolor="#1C2328", 
             linecolor="#2A3338", 
             tickcolor="#2A3338",
-            tickfont=dict(color="#D7E1E8"),
-            titlefont=dict(color="#D7E1E8")
+            tickfont=dict(color="#D7E1E8")
         ),
         legend=dict(bgcolor="#0B0F10", bordercolor="#2A3338", font=dict(color="#D7E1E8")),
         margin=dict(l=40, r=30, t=40, b=40),
@@ -194,7 +192,7 @@ def fetch_news(ticker=None, limit=3):
 # Page configuration
 st.set_page_config(
     page_title="QuantSnap - Stock Rankings",
-    page_icon="📊",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -415,7 +413,7 @@ def ticker_tape(df):
     items = []
     for t, r in df.head(10).iterrows():
         # Use 1-month stock price growth for ticker tape (more stable)
-        growth_1m = r.get('growth_1m', 0)
+        growth_1m = r.get('momentum_1m', 0)
         cls = "c-up" if growth_1m>=0 else "c-down"
         items.append(f"<span class='badge'>{t}</span> <span class='{cls}'>{growth_1m:+.1f}%</span>")
     html = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;".join(items)
@@ -484,15 +482,15 @@ if df is not None and not df.empty:
         <div class="card">
           <div class="section-title">AVG 1M STOCK GROWTH</div>
           <div style="font-size:28px;font-weight:800"
-               class="{ 'c-up' if df['growth_1m'].mean()>=0 else 'c-down' }">
-            {df['growth_1m'].mean():.1f}%
+                               class="{ 'c-up' if df['momentum_1m'].mean()>=0 else 'c-down' }">
+             {df['momentum_1m'].mean():.1f}%
           </div>
         </div>""", unsafe_allow_html=True)
 
         c4.markdown(f"""
         <div class="card">
           <div class="section-title">AVG 3M STOCK GROWTH</div>
-          <div style="font-size:28px;font-weight:800" class="c-info">{df['growth_3m'].mean():.1f}%</div>
+                     <div style="font-size:28px;font-weight:800" class="c-info">{df['momentum_3m'].mean():.1f}%</div>
         </div>""", unsafe_allow_html=True)
         
         neon_divider("TOP PERFORMERS")
@@ -500,7 +498,7 @@ if df is not None and not df.empty:
 
         for i, (ticker, row) in enumerate(df.head(10).iterrows(), 1):
             score = row['score']
-            growth_1m = row['growth_1m']
+            growth_1m = row['momentum_1m']
             sharpe = row.get('sharpe_ratio', 0)
             company_name = row.get('name', ticker)
             logo_url = row.get('logo_url', '')
@@ -796,8 +794,8 @@ if df is not None and not df.empty:
                     st.markdown('<div class="section-title">OVERVIEW</div>', unsafe_allow_html=True)
                     
                     score = stock_data.get('score', 0)
-                    growth_1m = stock_data.get('growth_1m', 0)
-                    growth_3m = stock_data.get('growth_3m', 0)
+                    growth_1m = stock_data.get('momentum_1m', 0)
+                    growth_3m = stock_data.get('momentum_3m', 0)
                     price = stock_data.get('price', 0)
                     
                     # Determine sentiment
