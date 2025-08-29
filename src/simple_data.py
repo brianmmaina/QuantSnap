@@ -11,6 +11,17 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 import logging
 import time
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Set up data directory
+DATA_DIR = os.getenv('DATA_DIR', '/var/data')
+DATA_DIR = Path(DATA_DIR)
+DATA_DIR.mkdir(exist_ok=True)
 
 # Import our core modules
 from core.factors import calculate_all_factors
@@ -110,6 +121,17 @@ class SimpleDataManager:
             logger.info(f"Returning cached data for {universe_name}")
             return cached_data
         
+        # Check if CSV file exists
+        csv_file = DATA_DIR / f"{universe_name}_rankings.csv"
+        if csv_file.exists():
+            try:
+                logger.info(f"Loading from CSV: {csv_file}")
+                rankings_df = pd.read_csv(csv_file)
+                self.set_cached_data(cache_key, rankings_df)
+                return rankings_df
+            except Exception as e:
+                logger.error(f"Error loading CSV {csv_file}: {e}")
+        
         logger.info(f"Processing universe: {universe_name}")
         
         try:
@@ -167,6 +189,14 @@ class SimpleDataManager:
                 
                 # Cache the result
                 self.set_cached_data(cache_key, rankings_df)
+                
+                # Save to CSV file
+                try:
+                    csv_file = DATA_DIR / f"{universe_name}_rankings.csv"
+                    rankings_df.to_csv(csv_file, index=False)
+                    logger.info(f"Saved rankings to CSV: {csv_file}")
+                except Exception as e:
+                    logger.error(f"Error saving CSV: {e}")
                 
                 logger.info(f"Successfully processed {universe_name}: {len(factors_list)} stocks")
                 return rankings_df

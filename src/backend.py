@@ -39,12 +39,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize database
+# Initialize database and data directory
 @app.on_event("startup")
 async def startup_event():
-    """Initialize database on startup"""
+    """Initialize database and data directory on startup"""
     try:
-        init_database()
+        # Initialize data directory
+        from pathlib import Path
+        import os
+        
+        data_dir = Path(os.getenv('DATA_DIR', '/var/data'))
+        data_dir.mkdir(exist_ok=True)
+        print(f"Data directory ensured: {data_dir.absolute()}")
+        
+        # Initialize database (if needed)
+        try:
+            init_database()
+        except Exception as db_error:
+            logger.warning(f"Database initialization failed (using simple data): {db_error}")
+        
         logger.info("API started successfully")
     except Exception as e:
         logger.error(f"Failed to start API: {e}")
