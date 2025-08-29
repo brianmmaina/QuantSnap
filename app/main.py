@@ -62,9 +62,9 @@ async def startup_event():
     logger.info("QuantSnap API starting up...")
     
     # Update all data on startup
-    logger.info("Updating all stock data...")
+    logger.info("Updating all stock data with yfinance...")
     rankings = db.update_all_data("world_top_stocks")
-    logger.info(f"Updated {len(rankings)} stocks with 67/33 factor breakdown")
+    logger.info(f"Updated {len(rankings)} stocks with enhanced yfinance data")
 
 @app.get("/", response_model=RootResponse)
 async def root():

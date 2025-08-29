@@ -11,7 +11,6 @@ import logging
 import time
 from typing import List, Dict, Optional
 from pathlib import Path
-from data_provider import AlphaVantageProvider
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +19,7 @@ class Database:
         self.data_dir = Path("data")
         self.data_dir.mkdir(exist_ok=True)
         
-        # Initialize Alpha Vantage provider
-        self.alpha_vantage = AlphaVantageProvider()
+        # Note: Using yfinance as primary data source (no rate limits, reliable)
         
         # Focused stock universe - top stocks only
         self.stocks = [
@@ -41,19 +39,80 @@ class Database:
         ]
     
     def get_stock_data(self, ticker: str) -> Optional[Dict]:
-        """Get comprehensive stock data from Alpha Vantage with yfinance fallback"""
+        """Get comprehensive stock data from yfinance with optimized accuracy"""
         try:
-            # Try Alpha Vantage first
-            if self.alpha_vantage.api_key:
-                data = self.alpha_vantage.get_stock_data(ticker)
-                if data:
-                    logger.info(f"Successfully fetched {ticker} from Alpha Vantage")
-                    return data
-                else:
-                    logger.warning(f"Alpha Vantage failed for {ticker}, trying yfinance...")
+            # Use yfinance as primary source (no rate limits, more reliable)
+            time.sleep(0.1)  # Small delay to be respectful
             
-            # Fallback to yfinance
-            time.sleep(0.1)  # Rate limiting for yfinance
+            # Create ticker object
+            stock = yf.Ticker(ticker)
+            
+            # Get comprehensive data
+            hist = stock.history(period="1y", auto_adjust=True)
+            info = stock.info
+            
+            if hist.empty or len(hist) < 30:
+                logger.warning(f"Insufficient data for {ticker}")
+                return None
+            
+            # Get current price and calculate metrics
+            current_price = hist['Close'].iloc[-1]
+            returns = hist['Close'].pct_change().dropna()
+            
+            # Calculate accurate momentum using proper date ranges
+            if len(hist) >= 21:
+                month_ago_price = hist['Close'].iloc[-21]
+                momentum_1m = ((current_price / month_ago_price) - 1) * 100
+            else:
+                momentum_1m = 0
+                
+            if len(hist) >= 63:
+                three_months_ago_price = hist['Close'].iloc[-63]
+                momentum_3m = ((current_price / three_months_ago_price) - 1) * 100
+            else:
+                momentum_3m = 0
+                
+            if len(hist) >= 126:
+                six_months_ago_price = hist['Close'].iloc[-126]
+                momentum_6m = ((current_price / six_months_ago_price) - 1) * 100
+            else:
+                momentum_6m = 0
+            
+            # Volatility (30-day rolling)
+            volatility_30d = returns.tail(30).std() * 100 if len(returns) >= 30 else returns.std() * 100
+            
+            # Volume (20-day average)
+            volume_avg_20d = hist['Volume'].tail(20).mean() if len(hist) >= 20 else hist['Volume'].mean()
+            
+            # Sharpe ratio (3-month)
+            if len(returns) >= 63:
+                returns_3m = returns.tail(63)
+                sharpe_ratio = (returns_3m.mean() / returns_3m.std()) * np.sqrt(252) if returns_3m.std() > 0 else 0
+            else:
+                sharpe_ratio = 0
+            
+            # Daily change (current vs previous close)
+            previous_close = hist['Close'].iloc[-2] if len(hist) > 1 else current_price
+            daily_change = current_price - previous_close
+            daily_change_pct = (daily_change / previous_close) * 100 if previous_close > 0 else 0
+            
+            # Get comprehensive company info from yfinance
+            company_name = info.get('longName', info.get('shortName', ticker))
+            sector = info.get('sector', 'Unknown')
+            market_cap = info.get('marketCap', 0)
+            pe_ratio = info.get('trailingPE', 0)
+            dividend_yield = info.get('dividendYield', 0)
+            beta = info.get('beta', 1.0)
+            
+            # Enhanced scoring algorithm
+            score = (
+                (momentum_1m * 0.3) +      # 1M momentum (30% weight)
+                (momentum_3m * 0.25) +     # 3M momentum (25% weight)
+                (sharpe_ratio * 2.0) +     # Sharpe ratio (20% weight)
+                (volume_avg_20d / 1000000 * 0.1) + # Volume factor (10% weight)
+                (market_cap / 1e12 * 0.1) + # Market cap factor (10% weight)
+                (1 / (pe_ratio + 1) * 0.05) # P/E factor (5% weight)
+            )
             
             stock = yf.Ticker(ticker)
             hist = stock.history(period="1y")
@@ -130,6 +189,9 @@ class Database:
                 'daily_change': round(daily_change, 2),
                 'daily_change_pct': round(daily_change_pct, 2),
                 'market_cap': market_cap,
+                'pe_ratio': round(pe_ratio, 2) if pe_ratio else 0,
+                'dividend_yield': round(dividend_yield * 100, 2) if dividend_yield else 0,
+                'beta': round(beta, 2),
                 'score': round(score, 3),
                 'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             }
@@ -142,38 +204,40 @@ class Database:
             return None
     
     def get_live_prices(self, tickers: List[str]) -> Dict:
-        """Get live prices for multiple stocks from Alpha Vantage with yfinance fallback"""
-        # Try Alpha Vantage first
-        if self.alpha_vantage.api_key:
-            price_data = self.alpha_vantage.get_live_prices(tickers)
-            if price_data:
-                logger.info(f"Successfully fetched live prices from Alpha Vantage")
-                return price_data
-            else:
-                logger.warning("Alpha Vantage live prices failed, trying yfinance...")
-        
-        # Fallback to yfinance
+        """Get live prices for multiple stocks from yfinance with optimized accuracy"""
         price_data = {}
         
         for ticker in tickers:
             try:
-                time.sleep(0.1)  # Rate limiting
+                time.sleep(0.1)  # Small delay to be respectful
                 stock = yf.Ticker(ticker)
                 info = stock.info
                 
-                current_price = info.get('regularMarketPrice', 0)
-                previous_close = info.get('regularMarketPreviousClose', 0)
+                # Get current market data
+                current_price = info.get('regularMarketPrice', info.get('currentPrice', 0))
+                previous_close = info.get('regularMarketPreviousClose', info.get('previousClose', 0))
                 change = current_price - previous_close if previous_close else 0
                 change_pct = (change / previous_close * 100) if previous_close else 0
+                
+                # Get additional market data
+                volume = info.get('volume', info.get('regularMarketVolume', 0))
+                market_cap = info.get('marketCap', 0)
+                pe_ratio = info.get('trailingPE', 0)
+                dividend_yield = info.get('dividendYield', 0)
                 
                 price_data[ticker] = {
                     'price': round(current_price, 2),
                     'change': round(change, 2),
                     'change_pct': round(change_pct, 2),
-                    'volume': info.get('volume', 0),
-                    'market_cap': info.get('marketCap', 0),
+                    'volume': volume,
+                    'market_cap': market_cap,
+                    'pe_ratio': round(pe_ratio, 2) if pe_ratio else 0,
+                    'dividend_yield': round(dividend_yield * 100, 2) if dividend_yield else 0,
                     'timestamp': datetime.now().isoformat()
                 }
+                
+                logger.info(f"✅ Live price for {ticker}: ${current_price} ({change_pct:+.2f}%)")
+                
             except Exception as e:
                 logger.error(f"Error fetching live price for {ticker}: {e}")
                 continue
@@ -181,41 +245,58 @@ class Database:
         return price_data
     
     def get_chart_data(self, ticker: str, period: str = "1y") -> Optional[Dict]:
-        """Get chart data for a stock from yfinance"""
+        """Get chart data for a stock from yfinance with enhanced metrics"""
         try:
-            time.sleep(0.1)  # Rate limiting
+            time.sleep(0.1)  # Small delay to be respectful
             stock = yf.Ticker(ticker)
-            hist = stock.history(period=period)
+            
+            # Get historical data with auto-adjustment
+            hist = stock.history(period=period, auto_adjust=True)
             
             if hist.empty:
+                logger.warning(f"No chart data available for {ticker}")
                 return None
             
-            # Get company info
+            # Get comprehensive company info
             info = stock.info
             company_name = info.get('longName', info.get('shortName', ticker))
+            sector = info.get('sector', 'Unknown')
+            market_cap = info.get('marketCap', 0)
             
-            # Calculate current metrics
+            # Calculate enhanced metrics
             current_price = hist['Close'].iloc[-1]
             start_price = hist['Close'].iloc[0]
             change = current_price - start_price
             change_pct = (change / start_price) * 100
             
-            # Format chart data
+            # Calculate additional metrics
+            returns = hist['Close'].pct_change().dropna()
+            volatility = returns.std() * 100
+            avg_volume = hist['Volume'].mean()
+            
+            # Format chart data with OHLCV
             chart_data = []
             for date, row in hist.iterrows():
                 chart_data.append({
                     'date': date.strftime('%Y-%m-%d'),
-                    'price': round(row['Close'], 2),
-                    'volume': row['Volume']
+                    'open': round(row['Open'], 2),
+                    'high': round(row['High'], 2),
+                    'low': round(row['Low'], 2),
+                    'close': round(row['Close'], 2),
+                    'volume': int(row['Volume'])
                 })
             
             return {
                 "ticker": ticker,
                 "company_name": company_name,
+                "sector": sector,
                 "period": period,
                 "current_price": round(current_price, 2),
                 "change": round(change, 2),
                 "change_pct": round(change_pct, 2),
+                "volatility": round(volatility, 2),
+                "avg_volume": int(avg_volume),
+                "market_cap": market_cap,
                 "data": chart_data,
                 "timestamp": datetime.now().isoformat()
             }
