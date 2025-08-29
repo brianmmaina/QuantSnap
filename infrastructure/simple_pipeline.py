@@ -33,43 +33,30 @@ class SimpleDataPipeline:
         logger.info(f"Fetching data for {len(tickers)} tickers")
         
         all_data = {}
-        batch_size = 10  # Smaller batches to avoid rate limiting
         
-        for i in range(0, len(tickers), batch_size):
-            batch = tickers[i:i + batch_size]
-            logger.info(f"Processing batch {i//batch_size + 1}: {batch}")
-            
+        # Process tickers one by one to avoid concatenation issues
+        for ticker in tickers:
             try:
-                # Ensure batch is a list of strings
-                batch = [str(ticker) for ticker in batch if ticker]
-                logger.info(f"Downloading batch: {batch}")
-                logger.info(f"Batch type: {type(batch)}, length: {len(batch)}")
-                logger.info(f"First ticker: {batch[0] if batch else 'None'}")
+                logger.info(f"Downloading single ticker: {ticker}")
                 
                 data = yf.download(
-                    batch,
+                    ticker,
                     period=period,
                     interval="1d",
                     auto_adjust=True,
-                    group_by='ticker',
                     progress=False
                 )
                 
-                # Handle single ticker case
-                if len(batch) == 1:
-                    data.columns = pd.MultiIndex.from_product([[batch[0]], data.columns])
+                if not data.empty and len(data) >= 65:
+                    all_data[ticker] = data
+                    logger.info(f"Successfully downloaded {ticker}")
+                else:
+                    logger.warning(f"Insufficient data for {ticker}")
                 
-                # Process each ticker
-                for ticker in batch:
-                    if ticker in data.columns.get_level_values(0):
-                        ticker_data = data.xs(ticker, axis=1, level=0)
-                        if not ticker_data.empty and len(ticker_data) >= 65:
-                            all_data[ticker] = ticker_data
-                
-                time.sleep(1)  # Rate limiting
+                time.sleep(0.5)  # Rate limiting
                 
             except Exception as e:
-                logger.error(f"Error fetching batch {batch}: {e}")
+                logger.error(f"Error fetching {ticker}: {e}")
                 continue
         
         logger.info(f"Successfully fetched data for {len(all_data)} tickers")
