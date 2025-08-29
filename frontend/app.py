@@ -758,41 +758,41 @@ if df is not None and not df.empty:
                     if price_series.isnull().any():
                         st.markdown('<div class="alert alert-warning">Chart data contains missing values</div>', unsafe_allow_html=True)
                     else:
-                    # Time period selection
-                    col1, col2, col3, col4, col5 = st.columns(5)
-                    with col1:
-                        period_1m = st.button("1M", key="1m", use_container_width=True)
-                    with col2:
-                        period_3m = st.button("3M", key="3m", use_container_width=True)
-                    with col3:
-                        period_6m = st.button("6M", key="6m", use_container_width=True)
-                    with col4:
-                        period_1y = st.button("1Y", key="1y", use_container_width=True)
-                    with col5:
-                        period_max = st.button("MAX", key="max", use_container_width=True)
-                    
-                    # Determine selected period
-                    if period_1m:
-                        selected_period = 21
-                        period_name = "1 Month"
-                    elif period_3m:
-                        selected_period = 63
-                        period_name = "3 Months"
-                    elif period_6m:
-                        selected_period = 126
-                        period_name = "6 Months"
-                    elif period_1y:
-                        selected_period = 252
-                        period_name = "1 Year"
-                    elif period_max:
-                        selected_period = len(price_series)
-                        period_name = "Max"
-                    else:
-                        selected_period = 63
-                        period_name = "3 Months"
-                    
-                    # Create Bloomberg-style price chart
-                    chart_data = price_series.tail(selected_period)
+                        # Time period selection
+                        col1, col2, col3, col4, col5 = st.columns(5)
+                        with col1:
+                            period_1m = st.button("1M", key="1m", use_container_width=True)
+                        with col2:
+                            period_3m = st.button("3M", key="3m", use_container_width=True)
+                        with col3:
+                            period_6m = st.button("6M", key="6m", use_container_width=True)
+                        with col4:
+                            period_1y = st.button("1Y", key="1y", use_container_width=True)
+                        with col5:
+                            period_max = st.button("MAX", key="max", use_container_width=True)
+                        
+                        # Determine selected period
+                        if period_1m:
+                            selected_period = 21
+                            period_name = "1 Month"
+                        elif period_3m:
+                            selected_period = 63
+                            period_name = "3 Months"
+                        elif period_6m:
+                            selected_period = 126
+                            period_name = "6 Months"
+                        elif period_1y:
+                            selected_period = 252
+                            period_name = "1 Year"
+                        elif period_max:
+                            selected_period = len(price_series)
+                            period_name = "Max"
+                        else:
+                            selected_period = 63
+                            period_name = "3 Months"
+                        
+                        # Create Bloomberg-style price chart
+                        chart_data = price_series.tail(selected_period)
                     
                     fig = go.Figure()
                     fig.add_trace(go.Scatter(
