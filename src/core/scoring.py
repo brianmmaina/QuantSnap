@@ -105,7 +105,6 @@ def get_default_weights() -> Dict[str, float]:
     normalized_weights = {k: v / total_weight for k, v in weights.items()}
     
     return normalized_weights
-    }
 
 
 def create_composite_reputation_factors(factors_df: pd.DataFrame) -> pd.DataFrame:
