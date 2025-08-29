@@ -261,6 +261,91 @@ async def get_sector_performance():
         logger.error(f"Error getting sector performance: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/prices/live")
+async def get_live_prices(tickers: str = Query(..., description="Comma-separated list of tickers")):
+    """Get live prices for multiple stocks"""
+    try:
+        import yfinance as yf
+        
+        ticker_list = [t.strip().upper() for t in tickers.split(',')]
+        price_data = {}
+        
+        for ticker in ticker_list:
+            try:
+                stock = yf.Ticker(ticker)
+                info = stock.info
+                
+                current_price = info.get('regularMarketPrice', 0)
+                previous_close = info.get('regularMarketPreviousClose', 0)
+                change = current_price - previous_close if previous_close else 0
+                change_pct = (change / previous_close * 100) if previous_close else 0
+                
+                price_data[ticker] = {
+                    'price': round(current_price, 2),
+                    'change': round(change, 2),
+                    'change_pct': round(change_pct, 2),
+                    'volume': info.get('volume', 0),
+                    'market_cap': info.get('marketCap', 0),
+                    'timestamp': datetime.now().isoformat()
+                }
+            except Exception as e:
+                logger.error(f"Error fetching price for {ticker}: {e}")
+                continue
+        
+        return {
+            "prices": price_data,
+            "count": len(price_data),
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error getting live prices: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/chart/{ticker}")
+async def get_chart_data(ticker: str, period: str = Query("1y", description="Chart period")):
+    """Get chart data for a stock"""
+    try:
+        import yfinance as yf
+        
+        stock = yf.Ticker(ticker)
+        hist = stock.history(period=period)
+        
+        if hist.empty:
+            raise HTTPException(status_code=404, detail=f"No data found for {ticker}")
+        
+        # Get company info
+        info = stock.info
+        company_name = info.get('longName', info.get('shortName', ticker))
+        
+        # Calculate current metrics
+        current_price = hist['Close'].iloc[-1]
+        start_price = hist['Close'].iloc[0]
+        change = current_price - start_price
+        change_pct = (change / start_price) * 100
+        
+        # Format chart data
+        chart_data = []
+        for date, row in hist.iterrows():
+            chart_data.append({
+                'date': date.strftime('%Y-%m-%d'),
+                'price': round(row['Close'], 2),
+                'volume': row['Volume']
+            })
+        
+        return {
+            "ticker": ticker,
+            "company_name": company_name,
+            "period": period,
+            "current_price": round(current_price, 2),
+            "change": round(change, 2),
+            "change_pct": round(change_pct, 2),
+            "data": chart_data,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error getting chart data for {ticker}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/universes", response_model=UniverseResponse)
 async def get_universes():
     """Get available universes"""

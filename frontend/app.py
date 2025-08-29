@@ -561,29 +561,13 @@ if df is not None and not df.empty:
         neon_divider("LIVE STOCK PRICES")
         
         try:
-            import yfinance as yf
-            
-            # Get current prices for top stocks
+            # Get current prices for top stocks using backend API
             top_stocks_prices = df.head(10).index.tolist()
-            price_data = {}
+            tickers_str = ','.join(top_stocks_prices)
             
-            for ticker in top_stocks_prices:
-                try:
-                    ticker_obj = yf.Ticker(ticker)
-                    info = ticker_obj.info
-                    current_price = info.get('regularMarketPrice', 0)
-                    previous_close = info.get('regularMarketPreviousClose', 0)
-                    change = current_price - previous_close if previous_close else 0
-                    change_pct = (change / previous_close * 100) if previous_close else 0
-                    
-                    price_data[ticker] = {
-                        'price': current_price,
-                        'change': change,
-                        'change_pct': change_pct,
-                        'volume': info.get('volume', 0)
-                    }
-                except:
-                    continue
+            # Fetch live prices from backend
+            price_response = api_request(f"/prices/live?tickers={tickers_str}")
+            price_data = price_response.get('prices', {})
             
             if price_data:
                 # Display price cards in 2 rows of 5

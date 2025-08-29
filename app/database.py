@@ -63,10 +63,27 @@ class Database:
             current_price = hist['Close'].iloc[-1]
             returns = hist['Close'].pct_change().dropna()
             
-            # Momentum factors
-            momentum_1m = ((current_price / hist['Close'].iloc[-22]) - 1) * 100 if len(hist) >= 21 else 0
-            momentum_3m = ((current_price / hist['Close'].iloc[-64]) - 1) * 100 if len(hist) >= 63 else 0
-            momentum_6m = ((current_price / hist['Close'].iloc[-126]) - 1) * 100 if len(hist) >= 126 else 0
+            # Momentum factors - more precise calculations
+            # 1 month = ~21 trading days
+            if len(hist) >= 21:
+                month_ago_price = hist['Close'].iloc[-21]  # 21 days ago
+                momentum_1m = ((current_price / month_ago_price) - 1) * 100
+            else:
+                momentum_1m = 0
+                
+            # 3 months = ~63 trading days
+            if len(hist) >= 63:
+                three_months_ago_price = hist['Close'].iloc[-63]  # 63 days ago
+                momentum_3m = ((current_price / three_months_ago_price) - 1) * 100
+            else:
+                momentum_3m = 0
+                
+            # 6 months = ~126 trading days
+            if len(hist) >= 126:
+                six_months_ago_price = hist['Close'].iloc[-126]  # 126 days ago
+                momentum_6m = ((current_price / six_months_ago_price) - 1) * 100
+            else:
+                momentum_6m = 0
             
             # Volatility factors
             volatility_30d = returns.tail(30).std() * 100 if len(returns) >= 30 else returns.std() * 100
