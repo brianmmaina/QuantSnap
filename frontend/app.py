@@ -348,7 +348,7 @@ if 'analysis_search' not in st.session_state:
 
 # Data Loading from API
 with st.spinner("Loading data from database..."):
-    df = get_rankings_from_api("popular_stocks", 10)
+    df = get_rankings_from_api("world_top_stocks", 10)
 
 if df is not None and not df.empty:
     # Show data status
@@ -398,7 +398,7 @@ if df is not None and not df.empty:
         cols = st.columns(2)
 
         for i, (ticker, row) in enumerate(df.head(10).iterrows(), 1):
-            score = row['score']; mom = row['momentum_1m']; mom3m = row['momentum_3m']
+            score = row['score']; mom = row['momentum_1m']; sharpe = row.get('sharpe_ratio', 0)
             score_class = "c-up" if score>1 else "c-warn" if score>0.5 else "c-muted" if score>0 else "c-down"
             # Left column: ranks 1-5, Right column: ranks 6-10
             with cols[0] if i <= 5 else cols[1]:
@@ -411,8 +411,8 @@ if df is not None and not df.empty:
                         <div class="c-muted" style="font-size:12px">{row.get('name', ticker)}</div>
                         <div style="font-size:12px;margin-top:4px">
                           <span class="{score_class}">Score {score:.3f}</span> |
-                          <span class="{ 'c-up' if mom>=0 else 'c-down' }">1M {mom:.1%}</span> |
-                          <span class="c-info">3M {mom3m:.1%}</span>
+                          <span class="{ 'c-up' if mom>=0 else 'c-down' }">1M {mom:.1f}%</span> |
+                          <span class="c-info">Sharpe {sharpe:.2f}</span>
                         </div>
                       </div>
                       <div class="rank">#{i}</div>
@@ -659,18 +659,14 @@ if df is not None and not df.empty:
         
         # Stock Analysis Form
         with st.form("stock_analysis_form", clear_on_submit=False):
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                search_ticker = st.text_input(
-                    "Enter stock symbol (e.g., AAPL, TSLA, GOOGL)", 
-                    value=st.session_state.analysis_search,
-                    placeholder="AAPL", 
-                    label_visibility="collapsed",
-                    key="analysis_input"
-                )
-            with col2:
-                st.write("")  # Spacer for alignment
-                search_button = st.form_submit_button("Analyze", type="primary", use_container_width=True)
+            search_ticker = st.text_input(
+                "Enter stock symbol (e.g., AAPL, TSLA, GOOGL)", 
+                value=st.session_state.analysis_search,
+                placeholder="AAPL", 
+                label_visibility="collapsed",
+                key="analysis_input"
+            )
+            search_button = st.form_submit_button("Analyze", type="primary", use_container_width=True)
         
         # Handle form submission
         if search_button and search_ticker:
@@ -767,6 +763,71 @@ if df is not None and not df.empty:
                         """, unsafe_allow_html=True)
                 else:
                     st.markdown('<div class="alert alert-info">No recent news available for this stock.</div>', unsafe_allow_html=True)
+        
+        # Portfolio Analysis Section
+        neon_divider("PORTFOLIO ANALYSIS")
+        
+        # Portfolio Analysis Cards
+        col1, col2, col3, col4 = st.columns(4)
+        
+        # Calculate portfolio metrics
+        if df is not None and not df.empty:
+            top_10_df = df.head(10)
+            avg_score = top_10_df['score'].mean()
+            avg_momentum = top_10_df['momentum_1m'].mean()
+            avg_sharpe = top_10_df.get('sharpe_ratio', pd.Series([0]*len(top_10_df))).mean()
+            total_market_cap = top_10_df.get('market_cap', pd.Series([0]*len(top_10_df))).sum()
+            
+            col1.markdown(f"""
+            <div class="card">
+              <div class="section-title">PORTFOLIO SCORE</div>
+              <div style="font-size:28px;font-weight:800" class="c-up">{avg_score:.3f}</div>
+              <div class="c-muted" style="font-size:12px">Average Score</div>
+            </div>""", unsafe_allow_html=True)
+
+            col2.markdown(f"""
+            <div class="card">
+              <div class="section-title">AVG MOMENTUM</div>
+              <div style="font-size:28px;font-weight:800" class="{ 'c-up' if avg_momentum>=0 else 'c-down' }">{avg_momentum:.1f}%</div>
+              <div class="c-muted" style="font-size:12px">1-Month Return</div>
+            </div>""", unsafe_allow_html=True)
+
+            col3.markdown(f"""
+            <div class="card">
+              <div class="section-title">RISK-ADJUSTED</div>
+              <div style="font-size:28px;font-weight:800" class="c-info">{avg_sharpe:.2f}</div>
+              <div class="c-muted" style="font-size:12px">Avg Sharpe Ratio</div>
+            </div>""", unsafe_allow_html=True)
+
+            col4.markdown(f"""
+            <div class="card">
+              <div class="section-title">MARKET CAP</div>
+              <div style="font-size:28px;font-weight:800" class="c-warn">${total_market_cap/1e12:.1f}T</div>
+              <div class="c-muted" style="font-size:12px">Total Value</div>
+            </div>""", unsafe_allow_html=True)
+        
+        # Portfolio Composition Chart
+        if df is not None and not df.empty:
+            top_10_df = df.head(10)
+            
+            # Create sector breakdown
+            sectors = top_10_df.get('sector', pd.Series(['Unknown']*len(top_10_df))).value_counts()
+            
+            fig = go.Figure(data=[go.Pie(
+                labels=sectors.index,
+                values=sectors.values,
+                hole=0.4,
+                marker_colors=['#00E676', '#00C2FF', '#FFB000', '#FF4D4D', '#A78BFA', '#64FFDA']
+            )])
+            
+            fig.update_layout(
+                title="Portfolio Sector Allocation",
+                height=400,
+                showlegend=True,
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
+            
+            st.plotly_chart(fig, use_container_width=True, theme=None)
         
         # News Section
         neon_divider("MARKET NEWS")

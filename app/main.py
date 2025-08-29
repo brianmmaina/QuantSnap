@@ -55,7 +55,7 @@ class DataStore:
         self.data_dir.mkdir(exist_ok=True)
         self.cache = {}
     
-    def get_popular_stocks(self) -> List[str]:
+    def get_world_top_stocks(self) -> List[str]:
         """Get world top stock tickers"""
         return [
             # US Mega Caps
@@ -104,15 +104,32 @@ class DataStore:
             volume = data['Volume']
             returns = close_prices.pct_change().dropna()
             
+            # Handle NaN values and calculate accurate metrics
+            momentum_1m = close_prices.pct_change(21).iloc[-1] * 100
+            momentum_3m = close_prices.pct_change(63).iloc[-1] * 100
+            volatility_30d = returns.rolling(30).std().iloc[-1] * 100
+            volume_avg = volume.rolling(20).mean().iloc[-1]
+            price = close_prices.iloc[-1]
+            price_change_1d = close_prices.pct_change().iloc[-1] * 100
+            price_change_5d = close_prices.pct_change(5).iloc[-1] * 100
+            
+            # Calculate Sharpe Ratio (3-month)
+            returns_3m = close_prices.pct_change(63).dropna()
+            if len(returns_3m) > 0:
+                sharpe_ratio = (returns_3m.mean() / returns_3m.std()) * np.sqrt(252) if returns_3m.std() > 0 else 0
+            else:
+                sharpe_ratio = 0
+            
             factors = {
                 'ticker': ticker,
-                'momentum_1m': float(close_prices.pct_change(21).iloc[-1] * 100),
-                'momentum_3m': float(close_prices.pct_change(63).iloc[-1] * 100),
-                'volatility_30d': float(returns.rolling(30).std().iloc[-1] * 100),
-                'volume_avg': float(volume.rolling(20).mean().iloc[-1]),
-                'price': float(close_prices.iloc[-1]),
-                'price_change_1d': float(close_prices.pct_change().iloc[-1] * 100),
-                'price_change_5d': float(close_prices.pct_change(5).iloc[-1] * 100),
+                'momentum_1m': 0.0 if pd.isna(momentum_1m) else round(momentum_1m, 2),
+                'momentum_3m': 0.0 if pd.isna(momentum_3m) else round(momentum_3m, 2),
+                'volatility_30d': 0.0 if pd.isna(volatility_30d) else round(volatility_30d, 2),
+                'volume_avg': 0.0 if pd.isna(volume_avg) else round(volume_avg, 0),
+                'price': 0.0 if pd.isna(price) else round(price, 2),
+                'price_change_1d': 0.0 if pd.isna(price_change_1d) else round(price_change_1d, 2),
+                'price_change_5d': 0.0 if pd.isna(price_change_5d) else round(price_change_5d, 2),
+                'sharpe_ratio': round(sharpe_ratio, 2),
                 'date': datetime.now().isoformat()
             }
             
@@ -153,7 +170,7 @@ class DataStore:
         
         logger.info(f"Processing universe: {universe_name}")
         
-        tickers = self.get_popular_stocks()
+        tickers = self.get_world_top_stocks()
         results = []
         
         for ticker in tickers:
@@ -165,13 +182,17 @@ class DataStore:
                     company_info = self.get_company_info(ticker)
                     factors.update(company_info)
                     
-                                                # Calculate score (momentum + volume)
+                                                # Calculate comprehensive score
+                    momentum_score = (factors['momentum_1m'] * 0.5 + factors['momentum_3m'] * 0.3) / 100
+                    sharpe_score = min(factors['sharpe_ratio'] / 3.0, 1.0)  # Normalize Sharpe ratio
+                    volume_score = min(factors['volume_avg'] / 10000000, 1.0)  # Normalize volume
+                    
                     score = (
-                        factors['momentum_1m'] * 0.4 +
-                        factors['momentum_3m'] * 0.3 +
-                        (factors['volume_avg'] / 1000000) * 0.3  # Normalize volume
+                        momentum_score * 0.5 +
+                        sharpe_score * 0.3 +
+                        volume_score * 0.2
                     )
-                    factors['score'] = round(score, 2)
+                    factors['score'] = round(score, 3)
                     results.append(factors)
                 
             except Exception as e:
@@ -213,7 +234,7 @@ async def startup_event():
     # Auto-populate data on startup
     logger.info("Auto-populating data on startup...")
     try:
-        rankings = data_store.process_universe("popular_stocks")
+        rankings = data_store.process_universe("world_top_stocks")
         logger.info(f"Auto-populated {len(rankings)} stocks on startup")
     except Exception as e:
         logger.error(f"Error auto-populating data: {e}")
@@ -235,7 +256,7 @@ async def health_check():
 
 @app.get("/rankings/{universe}")
 async def get_rankings(
-    universe: str = "popular_stocks",
+    universe: str = "world_top_stocks",
     limit: int = Query(10, description="Number of stocks to return")
 ):
     """Get stock rankings"""
@@ -270,7 +291,7 @@ async def get_stock_data(ticker: str):
 async def populate_data():
     """Populate data (simple version)"""
     try:
-        rankings = data_store.process_universe("popular_stocks")
+        rankings = data_store.process_universe("world_top_stocks")
         return {
             "status": "success",
             "message": f"Processed {len(rankings)} stocks",
