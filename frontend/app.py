@@ -319,8 +319,8 @@ st.markdown("""
       <div style="font-weight: 700; color: var(--accent); margin-bottom: 8px;">🎯 SCORING ALGORITHM</div>
       <div style="font-size: 14px; line-height: 1.5; color: var(--text);">
         <strong>Composite Score =</strong><br>
-        • 1M Growth (30% weight)<br>
-        • 3M Growth (25% weight)<br>
+        • 1M Stock Price Growth (30% weight)<br>
+        • 3M Stock Price Growth (25% weight)<br>
         • Sharpe Ratio (20% weight)<br>
         • Volume Factor (10% weight)<br>
         • Market Cap (10% weight)<br>
@@ -347,10 +347,10 @@ st.markdown("""
 def ticker_tape(df):
     items = []
     for t, r in df.head(10).iterrows():
-        # Use 1-month momentum for ticker tape (more stable)
-        momentum_1m = r.get('momentum_1m', 0)
-        cls = "c-up" if momentum_1m>=0 else "c-down"
-        items.append(f"<span class='badge'>{t}</span> <span class='{cls}'>{momentum_1m:+.1f}%</span>")
+        # Use 1-month stock price growth for ticker tape (more stable)
+        growth_1m = r.get('momentum_1m', 0)
+        cls = "c-up" if growth_1m>=0 else "c-down"
+        items.append(f"<span class='badge'>{t}</span> <span class='{cls}'>{growth_1m:+.1f}%</span>")
     html = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;".join(items)
     st.markdown(f"""
     <style>
@@ -415,7 +415,7 @@ if df is not None and not df.empty:
 
         c3.markdown(f"""
         <div class="card">
-          <div class="section-title">AVG 1M GROWTH</div>
+          <div class="section-title">AVG 1M STOCK GROWTH</div>
           <div style="font-size:28px;font-weight:800"
                class="{ 'c-up' if df['momentum_1m'].mean()>=0 else 'c-down' }">
             {df['momentum_1m'].mean():.1f}%
@@ -424,7 +424,7 @@ if df is not None and not df.empty:
 
         c4.markdown(f"""
         <div class="card">
-          <div class="section-title">AVG 3M GROWTH</div>
+          <div class="section-title">AVG 3M STOCK GROWTH</div>
           <div style="font-size:28px;font-weight:800" class="c-info">{df['momentum_3m'].mean():.1f}%</div>
         </div>""", unsafe_allow_html=True)
         
@@ -433,7 +433,7 @@ if df is not None and not df.empty:
 
         for i, (ticker, row) in enumerate(df.head(10).iterrows(), 1):
             score = row['score']
-            momentum_1m = row['momentum_1m']
+            growth_1m = row['momentum_1m']
             sharpe = row.get('sharpe_ratio', 0)
             company_name = row.get('name', ticker)
             logo_url = row.get('logo_url', '')
@@ -458,8 +458,8 @@ if df is not None and not df.empty:
                           <div style="font-weight: 700; font-size: 16px;" class="{score_class}">{score:.1f}</div>
                         </div>
                         <div>
-                          <div style="font-size: 12px; color: var(--muted);">1M Growth</div>
-                          <div style="font-weight: 700; font-size: 16px;" class="{'c-up' if momentum_1m>=0 else 'c-down'}">{momentum_1m:+.1f}%</div>
+                          <div style="font-size: 12px; color: var(--muted);">1M Stock Growth</div>
+                          <div style="font-weight: 700; font-size: 16px;" class="{'c-up' if growth_1m>=0 else 'c-down'}">{growth_1m:+.1f}%</div>
                         </div>
                       </div>
                       <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -728,8 +728,8 @@ if df is not None and not df.empty:
                     st.markdown('<div class="section-title">OVERVIEW</div>', unsafe_allow_html=True)
                     
                     score = stock_data.get('score', 0)
-                    mom_1m = stock_data.get('momentum_1m', 0)
-                    mom_3m = stock_data.get('momentum_3m', 0)
+                            growth_1m = stock_data.get('momentum_1m', 0)
+        growth_3m = stock_data.get('momentum_3m', 0)
                     price = stock_data.get('price', 0)
                     
                     # Determine sentiment
@@ -769,8 +769,8 @@ if df is not None and not df.empty:
                     The stock demonstrates {'strong' if score > 1 else 'moderate' if score > 0.5 else 'weak'} performance signals.
                     
                     **Risk Assessment:**
-                    - **Momentum Risk:** {'Low' if mom_1m > 0.05 else 'Medium' if mom_1m > -0.05 else 'High'}
-                    - **Trend Risk:** {'Low' if mom_3m > 0.1 else 'Medium' if mom_3m > -0.05 else 'High'}
+                    - **Stock Growth Risk:** {'Low' if growth_1m > 0.05 else 'Medium' if growth_1m > -0.05 else 'High'}
+                    - **Trend Risk:** {'Low' if growth_3m > 0.1 else 'Medium' if growth_3m > -0.05 else 'High'}
                     - **Overall Risk:** {'Low' if score > 1 else 'Medium' if score > 0.5 else 'High'}
                     
                     **Market Position:** {'Outperforming' if mom_1m > 0.1 else 'In-line' if mom_1m > -0.05 else 'Underperforming'}

@@ -96,8 +96,8 @@ class GeminiAI:
         Market Cap: ${stock_data.get('market_cap', 0):,.0f}
         
         Performance Metrics:
-        - 1-Month Momentum: {stock_data.get('momentum_1m', 0):.2f}%
-        - 3-Month Momentum: {stock_data.get('momentum_3m', 0):.2f}%
+        - 1-Month Stock Price Growth: {stock_data.get('momentum_1m', 0):.2f}%
+- 3-Month Stock Price Growth: {stock_data.get('momentum_3m', 0):.2f}%
         - Volatility: {stock_data.get('volatility', 0):.2f}%
         - Sharpe Ratio: {stock_data.get('sharpe_ratio', 0):.2f}
         - Average Volume: {stock_data.get('volume_avg', 0):,.0f}

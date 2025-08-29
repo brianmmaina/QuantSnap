@@ -127,7 +127,7 @@ class Database:
             current_price = hist['Close'].iloc[-1]
             returns = hist['Close'].pct_change().dropna()
             
-            # Calculate accurate momentum using proper date ranges
+            # Calculate accurate stock price growth using proper date ranges
             if len(hist) >= 21:
                 month_ago_price = hist['Close'].iloc[-21]
                 momentum_1m = ((current_price / month_ago_price) - 1) * 100
@@ -174,8 +174,8 @@ class Database:
             
             # Enhanced scoring algorithm
             score = (
-                (momentum_1m * 0.3) +      # 1M momentum (30% weight)
-                (momentum_3m * 0.25) +     # 3M momentum (25% weight)
+                            (momentum_1m * 0.3) +      # 1M stock price growth (30% weight)
+            (momentum_3m * 0.25) +     # 3M stock price growth (25% weight)
                 (sharpe_ratio * 2.0) +     # Sharpe ratio (20% weight)
                 (volume_avg_20d / 1000000 * 0.1) + # Volume factor (10% weight)
                 (market_cap / 1e12 * 0.1) + # Market cap factor (10% weight)

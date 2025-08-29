@@ -151,7 +151,7 @@ async def get_traditional_factors():
                 "factors": df.to_dict('records'),
                 "count": len(df),
                 "weight": "67%",
-                "description": "Traditional quantitative factors including momentum, volatility, volume, and Sharpe ratio",
+                "description": "Traditional quantitative factors including stock price growth, volatility, volume, and Sharpe ratio",
                 "timestamp": datetime.now().isoformat()
             }
         else:
@@ -188,8 +188,8 @@ async def get_factor_breakdown():
         "traditional_factors": {
             "weight": "67%",
             "components": {
-                "momentum_1m": "20% - 1-month price momentum",
-                "momentum_3m": "15% - 3-month price momentum", 
+                        "momentum_1m": "30% - 1-month stock price growth",
+        "momentum_3m": "25% - 3-month stock price growth", 
                 "sharpe_ratio": "25% - Risk-adjusted returns",
                 "volume": "10% - Trading volume",
                 "volatility": "10% - Price volatility (inverse)"
