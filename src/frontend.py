@@ -71,6 +71,11 @@ def get_rankings_from_api(universe: str, limit: int = 50) -> pd.DataFrame:
     data = api_request(f"/rankings/{universe}", {"limit": limit})
     if data and "rankings" in data:
         return pd.DataFrame(data["rankings"])
+    elif data and "detail" in data:
+        # Handle 404 error gracefully
+        st.warning(f"No data available for {universe}. Database may be empty.")
+        st.info("💡 Click 'Populate Database' to load stock data")
+        return pd.DataFrame()
     return pd.DataFrame()
 
 def get_stock_data_from_api(ticker: str) -> Dict:
@@ -472,6 +477,22 @@ with st.sidebar:
     else:
         st.info("📊 Quantitative Analysis Only")
         st.info("Add GEMINI_API_KEY for AI features")
+    
+    # Database Population Button
+    st.markdown("---")
+    st.markdown("### 🗄️ Database Management")
+    
+    if st.button("🚀 Populate Database", type="primary"):
+        with st.spinner("Populating database with stock data..."):
+            try:
+                response = requests.post(f"{API_BASE_URL}/populate/quick", timeout=300)
+                if response.status_code == 200:
+                    st.success("✅ Database populated successfully!")
+                    st.info("Refresh the page to see the data")
+                else:
+                    st.error(f"❌ Failed to populate database: {response.text}")
+            except Exception as e:
+                st.error(f"❌ Error: {e}")
 
 # Data Loading from API
 with st.spinner("Loading data from database..."):
