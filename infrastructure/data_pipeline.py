@@ -160,9 +160,8 @@ class DataPipeline:
                     self.db.insert_daily_prices(price_data_dict[ticker])
             
             # Step 3: Store company data
-            if companies_data:
-                companies_df = pd.DataFrame(companies_data)
-                self.db.db.insert_dataframe(companies_df, 'companies', if_exists='replace')
+            for company_data in companies_data:
+                self.db.insert_company(**company_data)
             
             # Step 4: Store factors
             if factors_data:
