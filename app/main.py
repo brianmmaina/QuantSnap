@@ -97,6 +97,13 @@ class DataStore:
             # Fetch data
             data = yf.download(ticker, period="1y", interval="1d", auto_adjust=True, progress=False)
             if data.empty or len(data) < 65:
+                logger.warning(f"Insufficient data for {ticker}: {len(data)} rows")
+                return None
+            
+            # Validate required columns exist
+            required_columns = ['Close', 'Volume']
+            if not all(col in data.columns for col in required_columns):
+                logger.warning(f"Missing required columns for {ticker}")
                 return None
             
             # Calculate factors
@@ -105,19 +112,53 @@ class DataStore:
             returns = close_prices.pct_change().dropna()
             
             # Handle NaN values and calculate accurate metrics
-            momentum_1m = close_prices.pct_change(21).iloc[-1] * 100
-            momentum_3m = close_prices.pct_change(63).iloc[-1] * 100
-            volatility_30d = returns.rolling(30).std().iloc[-1] * 100
-            volume_avg = volume.rolling(20).mean().iloc[-1]
-            price = close_prices.iloc[-1]
-            price_change_1d = close_prices.pct_change().iloc[-1] * 100
-            price_change_5d = close_prices.pct_change(5).iloc[-1] * 100
+            try:
+                momentum_1m = close_prices.pct_change(21).iloc[-1] * 100
+            except:
+                momentum_1m = 0.0
+                
+            try:
+                momentum_3m = close_prices.pct_change(63).iloc[-1] * 100
+            except:
+                momentum_3m = 0.0
+                
+            try:
+                volatility_30d = returns.rolling(30).std().iloc[-1] * 100
+            except:
+                volatility_30d = 0.0
+                
+            try:
+                volume_avg = volume.rolling(20).mean().iloc[-1]
+            except:
+                volume_avg = 0.0
+                
+            try:
+                price = close_prices.iloc[-1]
+            except:
+                price = 0.0
+                
+            try:
+                price_change_1d = close_prices.pct_change().iloc[-1] * 100
+            except:
+                price_change_1d = 0.0
+                
+            try:
+                price_change_5d = close_prices.pct_change(5).iloc[-1] * 100
+            except:
+                price_change_5d = 0.0
             
             # Calculate Sharpe Ratio (3-month)
-            returns_3m = close_prices.pct_change(63).dropna()
-            if len(returns_3m) > 0:
-                sharpe_ratio = (returns_3m.mean() / returns_3m.std()) * np.sqrt(252) if returns_3m.std() > 0 else 0
-            else:
+            try:
+                returns_3m = close_prices.pct_change(63).dropna()
+                if len(returns_3m) > 0:
+                    std_dev = returns_3m.std()
+                    if std_dev > 0:
+                        sharpe_ratio = (returns_3m.mean() / std_dev) * np.sqrt(252)
+                    else:
+                        sharpe_ratio = 0
+                else:
+                    sharpe_ratio = 0
+            except:
                 sharpe_ratio = 0
             
             factors = {
