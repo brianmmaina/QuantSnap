@@ -222,17 +222,29 @@ API_BASE_URL=https://quantsnap-backend.onrender.com
 
 ### **Code Implementation Examples**
 
-#### **Enhanced Scoring Algorithm**
+#### **67/33 Factor Breakdown Algorithm**
 ```python
-# Enhanced scoring algorithm prioritizing actual performance
-score = (
-    (momentum_1m * 0.4) +      # 1M stock price growth (40% weight) - PRIMARY FACTOR
-    (momentum_3m * 0.3) +      # 3M stock price growth (30% weight) - SECONDARY FACTOR
-    (sharpe_ratio * 0.5) +     # Sharpe ratio (15% weight) - REDUCED WEIGHT
-    (volume_avg_20d / 1000000 * 0.05) + # Volume factor (5% weight)
-    (market_cap / 1e12 * 0.05) + # Market cap factor (5% weight)
-    (1 / (pe_ratio + 1) * 0.05) # P/E factor (5% weight)
+# 67/33 Factor Breakdown: Traditional vs Reputation Factors
+
+# Traditional Factors (67% weight) - Quantitative metrics
+traditional_score = (
+    (momentum_1m * 0.3) +      # 1M stock price growth (30% of traditional)
+    (momentum_3m * 0.2) +      # 3M stock price growth (20% of traditional)
+    (sharpe_ratio * 0.1) +     # Sharpe ratio (10% of traditional)
+    (volume_avg_20d / 1000000 * 0.04) + # Volume factor (4% of traditional)
+    (market_cap / 1e12 * 0.03) + # Market cap factor (3% of traditional)
 )
+
+# Reputation Factors (33% weight) - Qualitative metrics
+reputation_score = (
+    (1 / (pe_ratio + 1) * 0.15) + # P/E ratio quality (15% of reputation)
+    (dividend_yield * 0.1) +      # Dividend yield (10% of reputation)
+    (1 / (beta + 0.1) * 0.08)     # Beta stability (8% of reputation)
+)
+
+# Combine with 67/33 weighting
+score = (traditional_score * 0.67) + (reputation_score * 0.33)
+```
 
 # Performance penalty for poor recent performance
 if momentum_1m < -10:  # If 1M growth is less than -10%

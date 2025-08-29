@@ -105,18 +105,42 @@ class NewsScraper:
             return self._get_fallback_market_news(limit)
     
     def _analyze_sentiment(self, text: str) -> str:
-        """Simple sentiment analysis"""
+        """Enhanced sentiment analysis with comprehensive word lists"""
         text_lower = text.lower()
         
-        positive_words = ['up', 'gain', 'rise', 'positive', 'strong', 'beat', 'growth', 'profit', 'success']
-        negative_words = ['down', 'fall', 'drop', 'negative', 'weak', 'miss', 'loss', 'decline', 'risk']
+        # Extensive positive word dictionary
+        positive_words = [
+            'up', 'gain', 'rise', 'positive', 'strong', 'beat', 'surge', 'jump', 'climb', 'soar',
+            'rally', 'boost', 'increase', 'growth', 'profit', 'earnings', 'revenue', 'success',
+            'exceed', 'outperform', 'bullish', 'optimistic', 'favorable', 'promising', 'robust',
+            'solid', 'excellent', 'outstanding', 'impressive', 'record', 'high', 'peak', 'breakthrough',
+            'innovation', 'expansion', 'acquisition', 'merger', 'partnership', 'launch', 'upgrade',
+            'improve', 'enhance', 'strengthen', 'accelerate', 'momentum', 'recovery', 'rebound',
+            'turnaround', 'revival', 'resurgence', 'thrive', 'flourish', 'prosper', 'excel',
+            'dominate', 'lead', 'outpace', 'overtake', 'surpass', 'outstrip', 'outshine'
+        ]
         
+        # Comprehensive negative word dictionary
+        negative_words = [
+            'down', 'fall', 'drop', 'negative', 'weak', 'miss', 'decline', 'plunge', 'crash',
+            'tumble', 'slump', 'dip', 'slide', 'sink', 'collapse', 'downturn', 'recession',
+            'loss', 'deficit', 'debt', 'bankruptcy', 'default', 'failure', 'struggle', 'challenge',
+            'risk', 'volatility', 'uncertainty', 'concern', 'worry', 'fear', 'anxiety', 'stress',
+            'pressure', 'tension', 'conflict', 'dispute', 'litigation', 'investigation', 'probe',
+            'scandal', 'controversy', 'criticism', 'backlash', 'boycott', 'protest', 'strike',
+            'layoff', 'firing', 'resignation', 'exit', 'departure', 'replacement', 'restructure',
+            'cut', 'reduce', 'decrease', 'shrink', 'contract', 'retreat', 'withdraw', 'abandon',
+            'cancel', 'delay', 'postpone', 'suspend', 'halt', 'stop', 'end', 'terminate'
+        ]
+        
+        # Count word frequency for sentiment analysis
         positive_count = sum(1 for word in positive_words if word in text_lower)
         negative_count = sum(1 for word in negative_words if word in text_lower)
         
-        if positive_count > negative_count:
+        # Determine sentiment based on word frequency
+        if positive_count > negative_count and positive_count > 0:
             return 'positive'
-        elif negative_count > positive_count:
+        elif negative_count > positive_count and negative_count > 0:
             return 'negative'
         else:
             return 'neutral'
@@ -174,22 +198,7 @@ class DataScraper:
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         })
     
-    def scrape_stock_info(self, ticker: str) -> Optional[Dict]:
-        """Scrape additional stock information"""
-        try:
-            # This is a placeholder for actual scraping logic
-            # In a real implementation, you might scrape from various financial websites
-            
-            # For now, return basic structure
-            return {
-                'ticker': ticker,
-                'scraped_at': datetime.now().isoformat(),
-                'additional_info': 'Scraped data placeholder'
-            }
-            
-        except Exception as e:
-            logger.error(f"Error scraping data for {ticker}: {e}")
-            return None
+
     
     def get_market_sentiment(self) -> Dict:
         """Get overall market sentiment indicators"""

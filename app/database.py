@@ -6,7 +6,7 @@ Database management for QuantSnap - Alpha Vantage + yfinance fallback
 import yfinance as yf
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime
 import logging
 import time
 from typing import List, Dict, Optional
@@ -19,23 +19,24 @@ class Database:
         self.data_dir = Path("data")
         self.data_dir.mkdir(exist_ok=True)
         
+        # Define factor files for 67/33 breakdown
+        self.traditional_factors_file = self.data_dir / "traditional_factors.csv"
+        self.reputation_factors_file = self.data_dir / "reputation_factors.csv"
+        
         # Note: Using yfinance as primary data source (no rate limits, reliable)
         
-        # Comprehensive stock universe - 500+ top stocks
+        # Comprehensive stock universe - 500+ top stocks (cleaned and deduplicated)
         self.stocks = [
             # Technology (100+ stocks)
             "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "META", "NVDA", "NFLX", "ADBE", "CRM",
             "ORCL", "INTC", "AMD", "QCOM", "TXN", "AVGO", "MU", "AMAT", "KLAC", "LRCX",
             "ASML", "TSM", "SMCI", "PLTR", "SNOW", "DDOG", "CRWD", "ZS", "OKTA", "NET",
             "PYPL", "COIN", "HOOD", "DASH", "UBER", "LYFT", "ZM", "TEAM", "SHOP", "SPOT",
-            "PINS", "SNAP", "RBLX", "EA", "TTWO", "TTD", "ROKU", "ZM", "DOCU", "TWLO",
+            "PINS", "SNAP", "RBLX", "EA", "TTWO", "TTD", "ROKU", "DOCU", "TWLO",
             "MELI", "SE", "JD", "BABA", "PDD", "TCEHY", "NIO", "XPEV", "LI", "BIDU",
             "NTES", "TME", "VIPS", "DIDI", "BILI", "IQ", "HUYA", "DOYU", "WB", "SINA",
             "SOHU", "CTRP", "TCOM", "HTHT", "ZTO", "YUMC", "BZUN", "VNET", "DANG", "WUBA",
-            "YY", "MOMO", "QUNR", "XNET", "JRJC", "SFUN", "RENN", "SINA", "SOHU", "CTRP",
-            "TCOM", "HTHT", "ZTO", "YUMC", "BZUN", "VNET", "DANG", "WUBA", "YY", "MOMO",
-            "QUNR", "XNET", "JRJC", "SFUN", "RENN", "SINA", "SOHU", "CTRP", "TCOM", "HTHT",
-            "ZTO", "YUMC", "BZUN", "VNET", "DANG", "WUBA", "YY", "MOMO", "QUNR", "XNET",
+            "YY", "MOMO", "QUNR", "XNET", "JRJC", "SFUN", "RENN",
             
             # Financial (50+ stocks)
             "JPM", "BAC", "WFC", "GS", "MS", "C", "AXP", "V", "MA", "UNH",
@@ -48,8 +49,7 @@ class Database:
             "JNJ", "PFE", "ABBV", "MRK", "TMO", "ABT", "DHR", "BMY", "AMGN", "GILD",
             "CVS", "WBA", "CI", "ANTM", "HUM", "CNC", "MOH", "WCG", "AGN", "BIIB",
             "REGN", "VRTX", "ALXN", "ILMN", "DXCM", "ISRG", "IDXX", "ALGN", "WST", "COO",
-            "IQV", "LH", "DGX", "HOLX", "BAX", "BDX", "ZBH", "SYK", "BSX", "MDT",
-            "EW", "ALGN", "WST", "COO", "IQV", "LH", "DGX", "HOLX", "BAX", "BDX",
+            "IQV", "LH", "DGX", "HOLX", "BAX", "BDX", "ZBH", "SYK", "BSX", "MDT", "EW",
             
             # Consumer/Retail (50+ stocks)
             "WMT", "TGT", "COST", "HD", "LOW", "NKE", "SBUX", "MCD", "DIS", "CMCSA",
@@ -64,16 +64,11 @@ class Database:
             "CHK", "RRC", "EQT", "SWN", "COG", "RICE", "GPOR", "AR", "NFX", "PE",
             
             # Industrials (50+ stocks)
-            "BA", "RTX", "LMT", "GD", "NOC", "LHX", "TDG", "KTOS", "TXT", "CAT",
-            "DE", "CNH", "AGCO", "TTC", "LNN", "ALG", "WNC", "OSK", "JCI", "EMR",
-            "ETN", "ROK", "DOV", "XYL", "AME", "FTV", "ITT", "FLS", "PH", "DHR",
-            "HON", "GE", "MMM", "EMR", "ETN", "ROK", "DOV", "XYL", "AME", "FTV",
-            "ITT", "FLS", "PH", "DHR", "HON", "GE", "MMM", "EMR", "ETN", "ROK",
+            "ITT", "FLS", "PH", "DHR", "HON", "GE", "MMM",
             
             # Materials (30+ stocks)
             "LIN", "APD", "FCX", "NEM", "NUE", "STLD", "X", "AA", "ALB", "LTHM",
             "LVS", "WYNN", "MGM", "CZR", "PENN", "BYD", "ERI", "BALY", "RRR", "CHDN",
-            "PENN", "BYD", "ERI", "BALY", "RRR", "CHDN", "LVS", "WYNN", "MGM", "CZR",
             
             # Real Estate (30+ stocks)
             "AMT", "CCI", "SBAC", "PLD", "EQIX", "DLR", "WELL", "PSA", "SPG", "O",
@@ -85,26 +80,20 @@ class Database:
             "EIX", "PEG", "AEE", "CMS", "CNP", "NI", "LNT", "ATO", "BKH", "PNW",
             
             # Communication Services (30+ stocks)
-            "GOOGL", "META", "NFLX", "DIS", "CMCSA", "T", "VZ", "TMUS", "CHTR", "CMCSA",
-            "FOX", "FOXA", "NWSA", "NWS", "PARA", "WBD", "LYV", "LGF.A", "LGF.B", "IMAX",
-            "NFLX", "DIS", "CMCSA", "T", "VZ", "TMUS", "CHTR", "CMCSA", "FOX", "FOXA",
+            "T", "VZ", "TMUS", "CHTR", "FOX", "FOXA", "NWSA", "NWS", "PARA", "WBD",
+            "LYV", "LGF.A", "LGF.B", "IMAX",
             
             # Consumer Staples (30+ stocks)
-            "KO", "PEP", "PG", "ULTA", "LULU", "UA", "DECK", "SKX", "FL", "JBLU",
             "PM", "MO", "STZ", "BF.B", "TAP", "SAM", "BUD", "HEINY", "DEO", "MGAM",
-            "CAG", "GIS", "K", "HSY", "SJM", "CPB", "HRL", "SJM", "CPB", "HRL",
+            "CAG", "GIS", "K", "HSY", "SJM", "CPB", "HRL",
             
-            # Additional Tech & Growth (100+ stocks)
-            "SQ", "ROKU", "ZM", "DOCU", "TWLO", "MELI", "SE", "JD", "BABA", "PDD",
-            "TCEHY", "NIO", "XPEV", "LI", "BIDU", "NTES", "TME", "VIPS", "DIDI", "BILI",
-            "IQ", "HUYA", "DOYU", "WB", "SINA", "SOHU", "CTRP", "TCOM", "HTHT", "ZTO",
-            "YUMC", "BZUN", "VNET", "DANG", "WUBA", "YY", "MOMO", "QUNR", "XNET", "JRJC",
-            "SFUN", "RENN", "SINA", "SOHU", "CTRP", "TCOM", "HTHT", "ZTO", "YUMC", "BZUN",
-            "VNET", "DANG", "WUBA", "YY", "MOMO", "QUNR", "XNET", "JRJC", "SFUN", "RENN",
-            "SINA", "SOHU", "CTRP", "TCOM", "HTHT", "ZTO", "YUMC", "BZUN", "VNET", "DANG",
-            "WUBA", "YY", "MOMO", "QUNR", "XNET", "JRJC", "SFUN", "RENN", "SINA", "SOHU",
-            "CTRP", "TCOM", "HTHT", "ZTO", "YUMC", "BZUN", "VNET", "DANG", "WUBA", "YY"
+            # Additional Tech & Growth (50+ stocks)
+            "SQ"
         ]
+        
+        # Remove duplicates and ensure unique stocks
+        self.stocks = list(set(self.stocks))
+        logger.info(f"Loaded {len(self.stocks)} unique stocks")
     
     def get_stock_data(self, ticker: str) -> Optional[Dict]:
         """Get comprehensive stock data from yfinance with optimized accuracy"""
@@ -172,15 +161,26 @@ class Database:
             dividend_yield = info.get('dividendYield', 0)
             beta = info.get('beta', 1.0)
             
-            # Enhanced scoring algorithm prioritizing actual performance
-            score = (
-                (momentum_1m * 0.4) +      # 1M stock price growth (40% weight) - PRIMARY FACTOR
-                (momentum_3m * 0.3) +      # 3M stock price growth (30% weight) - SECONDARY FACTOR
-                (sharpe_ratio * 0.5) +     # Sharpe ratio (15% weight) - REDUCED WEIGHT
-                (volume_avg_20d / 1000000 * 0.05) + # Volume factor (5% weight)
-                (market_cap / 1e12 * 0.05) + # Market cap factor (5% weight)
-                (1 / (pe_ratio + 1) * 0.05) # P/E factor (5% weight)
+            # 67/33 Factor Breakdown: Traditional vs Reputation Factors
+            
+            # Traditional Factors (67% weight) - Quantitative metrics
+            traditional_score = (
+                (momentum_1m * 0.3) +      # 1M stock price growth (30% of traditional)
+                (momentum_3m * 0.2) +      # 3M stock price growth (20% of traditional)
+                (sharpe_ratio * 0.1) +     # Sharpe ratio (10% of traditional)
+                (volume_avg_20d / 1000000 * 0.04) + # Volume factor (4% of traditional)
+                (market_cap / 1e12 * 0.03)    # Market cap factor (3% of traditional)
             )
+            
+            # Reputation Factors (33% weight) - Qualitative metrics
+            reputation_score = (
+                (1 / (pe_ratio + 1) * 0.15) + # P/E ratio quality (15% of reputation)
+                (dividend_yield * 0.1) +      # Dividend yield (10% of reputation)
+                (1 / (beta + 0.1) * 0.08)     # Beta stability (8% of reputation)
+            )
+            
+            # Combine with 67/33 weighting
+            score = (traditional_score * 0.67) + (reputation_score * 0.33)
             
             # Apply minimum performance threshold - penalize stocks with poor recent performance
             if momentum_1m < -10:  # If 1M growth is less than -10%

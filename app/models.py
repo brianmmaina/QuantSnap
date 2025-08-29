@@ -56,24 +56,7 @@ class RootResponse(BaseModel):
     description: str = Field(..., description="API description")
     status: str = Field(..., description="Service status")
 
-class StockUniverse(BaseModel):
-    """Stock universe model"""
-    name: str = Field(..., description="Universe name")
-    tickers: List[str] = Field(..., description="List of stock tickers")
-    description: Optional[str] = Field(default=None, description="Universe description")
 
-class FactorWeights(BaseModel):
-    """Factor weighting model"""
-    momentum_1m: float = Field(default=0.3, description="1-month momentum weight")
-    momentum_3m: float = Field(default=0.2, description="3-month momentum weight")
-    sharpe_ratio: float = Field(default=0.3, description="Sharpe ratio weight")
-    volume: float = Field(default=0.2, description="Volume weight")
-
-class AnalysisRequest(BaseModel):
-    """Stock analysis request"""
-    ticker: str = Field(..., description="Stock ticker to analyze")
-    include_news: bool = Field(default=True, description="Include news analysis")
-    include_ai: bool = Field(default=True, description="Include AI analysis")
 
 class AnalysisResponse(BaseModel):
     """Stock analysis response"""

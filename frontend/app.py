@@ -41,8 +41,7 @@ bloomberg_template = dict(
         legend=dict(
             bgcolor="#111417", 
             bordercolor="#4A5568", 
-            font=dict(color="#FFFFFF", size=11),
-            bordercolor="#4A5568"
+            font=dict(color="#FFFFFF", size=11)
         ),
         margin=dict(l=50, r=30, t=50, b=50),
         hoverlabel=dict(
@@ -481,15 +480,19 @@ st.markdown("""
   <div class="section-title">RANKING METHODOLOGY</div>
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 16px;">
     <div>
-      <div style="font-weight: 700; color: var(--accent); margin-bottom: 8px;">SCORING ALGORITHM</div>
+      <div style="font-weight: 700; color: var(--accent); margin-bottom: 8px;">67/33 FACTOR BREAKDOWN</div>
       <div style="font-size: 14px; line-height: 1.5; color: var(--text);">
-        <strong>Composite Score =</strong><br>
-        • 1M Stock Price Growth (30% weight)<br>
-        • 3M Stock Price Growth (25% weight)<br>
-        • Sharpe Ratio (20% weight)<br>
-        • Volume Factor (10% weight)<br>
-        • Market Cap (10% weight)<br>
-        • P/E Ratio (5% weight)
+        <strong>Traditional Factors (67%):</strong><br>
+        • 1M Stock Price Growth (30% of traditional)<br>
+        • 3M Stock Price Growth (20% of traditional)<br>
+        • Sharpe Ratio (10% of traditional)<br>
+        • Volume Factor (4% of traditional)<br>
+        • Market Cap (3% of traditional)<br>
+        <br>
+        <strong>Reputation Factors (33%):</strong><br>
+        • P/E Ratio Quality (15% of reputation)<br>
+        • Dividend Yield (10% of reputation)<br>
+        • Beta Stability (8% of reputation)
       </div>
     </div>
     <div>
@@ -667,20 +670,21 @@ if df is not None and not df.empty:
             if chart_stock:
                 # Fetch data from backend API
                 st.markdown(f'<div style="text-align: center; color: var(--accent); font-family: JetBrains Mono; font-weight: 600; margin: 10px 0;">Fetching data for {chart_stock}...</div>', unsafe_allow_html=True)
+
                 try:
                         chart_response = api_request(f"/chart/{chart_stock}?period=1y")
                         if chart_response and 'data' in chart_response:
                             # Convert chart data to pandas series for compatibility
                             chart_data = chart_response['data']
                             dates = pd.to_datetime([item['date'] for item in chart_data])
-                            prices = [item['close'] for item in chart_data]  # Use 'close' instead of 'price'
+                            prices = [item['close'] for item in chart_data]
                             price_series = pd.Series(prices, index=dates)
                         else:
                             st.error(f"Could not fetch data for {chart_stock}. Please check the stock symbol.")
                             price_series = None
-                    except Exception as e:
-                        st.error(f"Could not fetch data for {chart_stock}. Please check the stock symbol.")
-                        price_series = None
+                except Exception as e:
+                    st.error(f"Could not fetch data for {chart_stock}. Please check the stock symbol.")
+                    price_series = None
                 
                 if price_series is not None and len(price_series) > 30:
                     # Time period selection
@@ -889,7 +893,7 @@ if df is not None and not df.empty:
             # Get AI analysis
             ai_analysis = None
             if stock_data:
-                ai_response = api_request(f"/analyze/{search_ticker}")
+                ai_response = api_request(f"/stock/{search_ticker}/analysis")
                 if ai_response and 'ai_analysis' in ai_response:
                     ai_analysis = ai_response['ai_analysis']
                 

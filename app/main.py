@@ -19,7 +19,7 @@ from scraper import news_scraper, data_scraper
 from models import (
     RankingResponse, StockResponse, UniverseResponse, 
     PopulateResponse, HealthResponse, RootResponse,
-    AnalysisResponse, StockData
+    AnalysisResponse
 )
 
 # Load environment variables
@@ -188,20 +188,20 @@ async def get_factor_breakdown():
         "traditional_factors": {
             "weight": "67%",
             "components": {
-                        "momentum_1m": "30% - 1-month stock price growth",
-        "momentum_3m": "25% - 3-month stock price growth", 
-                "sharpe_ratio": "25% - Risk-adjusted returns",
-                "volume": "10% - Trading volume",
-                "volatility": "10% - Price volatility (inverse)"
+                "momentum_1m": "30% - 1-month stock price growth",
+                "momentum_3m": "20% - 3-month stock price growth", 
+                "sharpe_ratio": "10% - Risk-adjusted returns",
+                "volume": "4% - Trading volume",
+                "market_cap": "3% - Market capitalization"
             },
             "description": "Quantitative market performance indicators"
         },
         "reputation_factors": {
             "weight": "33%",
             "components": {
-                "financial_health": "40% - Debt ratios, ROE, ROA",
-                "market_position": "30% - Market cap, valuation ratios",
-                "growth_stability": "30% - Revenue growth, margins, dividends"
+                "pe_ratio": "15% - P/E ratio quality",
+                "dividend_yield": "10% - Dividend yield",
+                "beta": "8% - Beta stability"
             },
             "description": "Company fundamentals and stability indicators"
         },
