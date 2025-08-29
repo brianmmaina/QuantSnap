@@ -106,7 +106,7 @@ class StockDatabase:
     def insert_daily_prices(self, df: pd.DataFrame) -> None:
         """Insert daily price data"""
         # Clean and prepare data
-        df_clean = df.reset_index()
+        df_clean = df.reset_index(drop=True)  # Drop the index instead of keeping it
         
         # Handle both 'date' and 'Date' column names
         if 'Date' in df_clean.columns:
@@ -130,7 +130,7 @@ class StockDatabase:
     
     def insert_daily_factors(self, df: pd.DataFrame) -> None:
         """Insert calculated factors"""
-        df_clean = df.reset_index()
+        df_clean = df.reset_index(drop=True)  # Drop the index instead of keeping it
         
         # Handle both 'date' and 'Date' column names
         if 'Date' in df_clean.columns:
@@ -142,7 +142,7 @@ class StockDatabase:
     
     def insert_daily_rankings(self, df: pd.DataFrame, universe: str) -> None:
         """Insert daily rankings"""
-        df_clean = df.reset_index()
+        df_clean = df.reset_index(drop=True)  # Drop the index instead of keeping it
         df_clean['date'] = pd.to_datetime(df_clean['date']).dt.date
         df_clean['universe'] = universe
         
