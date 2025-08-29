@@ -202,17 +202,8 @@ async def get_rankings(
         # Get latest rankings from CSV
         rankings = pipeline.get_rankings(universe, limit)
         
-        # If no rankings found, try to populate the data
         if rankings.empty:
-            logger.info(f"No rankings found for {universe}, attempting to populate...")
-            try:
-                pipeline.process_universe(universe)
-                rankings = pipeline.get_rankings(universe, limit)
-            except Exception as e:
-                logger.error(f"Failed to populate {universe}: {e}")
-        
-        if rankings.empty:
-            raise HTTPException(status_code=404, detail=f"No rankings found for universe {universe}")
+            raise HTTPException(status_code=404, detail=f"No rankings found for universe {universe}. Please populate the database first.")
         
         result = {
             "universe": universe,

@@ -59,7 +59,7 @@ def api_request(endpoint: str, params: Dict = None) -> Dict:
     """Make API request to backend"""
     try:
         url = f"{API_BASE_URL}{endpoint}"
-        response = requests.get(url, params=params, timeout=10)
+        response = requests.get(url, params=params, timeout=30)  # Increased timeout
         response.raise_for_status()
         return response.json()
     except requests.exceptions.ConnectionError as e:
@@ -82,8 +82,11 @@ def get_rankings_from_api(universe: str, limit: int = 50) -> pd.DataFrame:
         return pd.DataFrame(data["rankings"])
     elif data and "detail" in data:
         # Handle 404 error gracefully
-        st.warning(f"No data available for {universe}. Database may be empty.")
-        st.info("💡 Click 'Populate Database' to load stock data")
+        if "No rankings found" in data["detail"]:
+            st.warning(f"📊 No data available for {universe}")
+            st.info("💡 Click 'Populate Database' in the sidebar to load stock data")
+        else:
+            st.error(f"❌ Error loading data: {data['detail']}")
         return pd.DataFrame()
     return pd.DataFrame()
 
@@ -140,7 +143,7 @@ def fetch_news(ticker=None, limit=5):
                         'apiKey': news_api_key
                     }
                 
-                response = requests.get(url, params=params, timeout=10)
+                response = requests.get(url, params=params, timeout=30)  # Increased timeout
                 if response.status_code == 200:
                     data = response.json()
                     articles = data.get('articles', [])
