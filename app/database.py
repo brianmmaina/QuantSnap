@@ -34,20 +34,20 @@ class Database:
             "PYPL", "COIN", "HOOD", "DASH", "UBER", "LYFT", "ZM", "TEAM", "SHOP", "SPOT",
             "PINS", "SNAP", "RBLX", "EA", "TTWO", "TTD", "ROKU", "DOCU", "TWLO",
             "MELI", "SE", "JD", "BABA", "PDD", "TCEHY", "NIO", "XPEV", "LI", "BIDU",
-            "NTES", "TME", "VIPS", "DIDI", "BILI", "IQ", "HUYA", "DOYU", "WB", "SINA",
-            "SOHU", "CTRP", "TCOM", "HTHT", "ZTO", "YUMC", "BZUN", "VNET", "DANG", "WUBA",
-            "YY", "MOMO", "QUNR", "XNET", "JRJC", "SFUN", "RENN",
+            "NTES", "TME", "VIPS", "BILI", "IQ", "HUYA", "DOYU", "WB", "SINA",
+            "SOHU", "CTRP", "TCOM", "HTHT", "ZTO", "YUMC", "BZUN", "VNET", "DANG",
+            "YY", "MOMO", "XNET", "JRJC", "SFUN",
             
             # Financial (50+ stocks)
             "JPM", "BAC", "WFC", "GS", "MS", "C", "AXP", "V", "MA", "UNH",
             "BLK", "SCHW", "COF", "USB", "PNC", "TFC", "KEY", "HBAN", "RF", "FITB",
             "MTB", "STT", "NTRS", "BEN", "IVZ", "TROW", "AMG", "APO", "KKR", "BX",
             "CG", "ARES", "OWL", "PIPR", "LAZ", "HLI", "EVR", "PJT", "MC", "RJF",
-            "SF", "AMP", "AON", "MMC", "WLTW", "AJG", "BRO", "MKL", "BRK.A", "BRK.B",
+            "SF", "AMP", "AON", "MMC", "AJG", "BRO", "MKL", "BRK.A", "BRK.B",
             
             # Healthcare (50+ stocks)
             "JNJ", "PFE", "ABBV", "MRK", "TMO", "ABT", "DHR", "BMY", "AMGN", "GILD",
-            "CVS", "WBA", "CI", "ANTM", "HUM", "CNC", "MOH", "WCG", "AGN", "BIIB",
+            "CVS", "WBA", "CI", "ANTM", "HUM", "CNC", "MOH", "AGN", "BIIB",
             "REGN", "VRTX", "ALXN", "ILMN", "DXCM", "ISRG", "IDXX", "ALGN", "WST", "COO",
             "IQV", "LH", "DGX", "HOLX", "BAX", "BDX", "ZBH", "SYK", "BSX", "MDT", "EW",
             
@@ -61,14 +61,14 @@ class Database:
             # Energy (30+ stocks)
             "XOM", "CVX", "COP", "EOG", "SLB", "HAL", "BKR", "KMI", "WMB", "MPC",
             "VLO", "PSX", "HES", "PXD", "FANG", "DVN", "MRO", "OXY", "APA", "NBL",
-            "CHK", "RRC", "EQT", "SWN", "COG", "RICE", "GPOR", "AR", "NFX", "PE",
+            "CHK", "RRC", "EQT", "SWN", "RICE", "GPOR", "AR", "NFX", "PE",
             
             # Industrials (50+ stocks)
             "ITT", "FLS", "PH", "DHR", "HON", "GE", "MMM",
             
             # Materials (30+ stocks)
             "LIN", "APD", "FCX", "NEM", "NUE", "STLD", "X", "AA", "ALB", "LTHM",
-            "LVS", "WYNN", "MGM", "CZR", "PENN", "BYD", "ERI", "BALY", "RRR", "CHDN",
+            "LVS", "WYNN", "MGM", "CZR", "PENN", "BYD", "BALY", "RRR", "CHDN",
             
             # Real Estate (30+ stocks)
             "AMT", "CCI", "SBAC", "PLD", "EQIX", "DLR", "WELL", "PSA", "SPG", "O",
@@ -81,7 +81,7 @@ class Database:
             
             # Communication Services (30+ stocks)
             "T", "VZ", "TMUS", "CHTR", "FOX", "FOXA", "NWSA", "NWS", "PARA", "WBD",
-            "LYV", "LGF.A", "LGF.B", "IMAX",
+            "LYV", "LGF.A", "IMAX",
             
             # Consumer Staples (30+ stocks)
             "PM", "MO", "STZ", "BF.B", "TAP", "SAM", "BUD", "HEINY", "DEO", "MGAM",
@@ -163,33 +163,51 @@ class Database:
             
             # 67/33 Factor Breakdown: Traditional vs Reputation Factors
             
+            # Improved scoring algorithm - prioritize positive growth and quality metrics
+            
             # Traditional Factors (67% weight) - Quantitative metrics
+            # Normalize and scale factors properly
+            momentum_1m_normalized = max(momentum_1m, -50) / 50  # Cap at -50% to +50%, normalize to -1 to +1
+            momentum_3m_normalized = max(momentum_3m, -50) / 50  # Cap at -50% to +50%, normalize to -1 to +1
+            sharpe_normalized = max(min(sharpe_ratio, 3), -1) / 3  # Cap Sharpe at -1 to +3, normalize to -0.33 to +1
+            volume_factor = min(volume_avg_20d / 10000000, 1)  # Volume factor (0 to 1, max 10M volume)
+            market_cap_factor = min(market_cap / 1e12, 1)  # Market cap factor (0 to 1, max 1T)
+            
             traditional_score = (
-                (momentum_1m * 0.3) +      # 1M stock price growth (30% of traditional)
-                (momentum_3m * 0.2) +      # 3M stock price growth (20% of traditional)
-                (sharpe_ratio * 0.1) +     # Sharpe ratio (10% of traditional)
-                (volume_avg_20d / 1000000 * 0.04) + # Volume factor (4% of traditional)
-                (market_cap / 1e12 * 0.03)    # Market cap factor (3% of traditional)
+                (momentum_1m_normalized * 0.4) +      # 1M growth (40% of traditional)
+                (momentum_3m_normalized * 0.25) +     # 3M growth (25% of traditional)
+                (sharpe_normalized * 0.15) +          # Sharpe ratio (15% of traditional)
+                (volume_factor * 0.1) +               # Volume factor (10% of traditional)
+                (market_cap_factor * 0.1)             # Market cap factor (10% of traditional)
             )
             
             # Reputation Factors (33% weight) - Qualitative metrics
+            pe_quality = max(1 / (pe_ratio + 1), 0) if pe_ratio > 0 else 0.5  # P/E quality (0 to 1)
+            dividend_factor = min(dividend_yield, 5) / 5  # Dividend factor (0 to 1, max 5%)
+            beta_stability = max(1 / (beta + 0.1), 0)  # Beta stability (0 to 1)
+            
             reputation_score = (
-                (1 / (pe_ratio + 1) * 0.15) + # P/E ratio quality (15% of reputation)
-                (dividend_yield * 0.1) +      # Dividend yield (10% of reputation)
-                (1 / (beta + 0.1) * 0.08)     # Beta stability (8% of reputation)
+                (pe_quality * 0.4) +           # P/E ratio quality (40% of reputation)
+                (dividend_factor * 0.35) +     # Dividend yield (35% of reputation)
+                (beta_stability * 0.25)        # Beta stability (25% of reputation)
             )
             
             # Combine with 67/33 weighting
             score = (traditional_score * 0.67) + (reputation_score * 0.33)
             
-            # Apply minimum performance threshold - penalize stocks with poor recent performance
-            if momentum_1m < -10:  # If 1M growth is less than -10%
-                score *= 0.5  # Reduce score by 50%
-            elif momentum_1m < 0:  # If 1M growth is negative but not too bad
-                score *= 0.8  # Reduce score by 20%
+            # Scale score to 0-10 range for better usability
+            score = score * 20  # Scale up to 0-10 range
+            
+            # Apply strict performance filters - exclude poor performers
+            if momentum_1m < -5:  # If 1M growth is less than -5%
+                score *= 0.1  # Severely penalize (90% reduction)
+            elif momentum_1m < 0:  # If 1M growth is negative
+                score *= 0.3  # Heavily penalize (70% reduction)
+            elif momentum_1m < 2:  # If 1M growth is less than 2%
+                score *= 0.7  # Moderate penalty (30% reduction)
             
             # Debug logging for top stocks
-            if ticker in ['NVDA', 'INTC', 'AMD', 'GOOGL', 'AAPL', 'TSLA', 'MSFT']:
+            if ticker in ['NVDA', 'INTC', 'AMD', 'GOOGL', 'AAPL', 'TSLA', 'MSFT', 'META', 'AMZN', 'NFLX']:
                 logger.info(f"DEBUG {ticker}: 1M={momentum_1m:.2f}%, 3M={momentum_3m:.2f}%, Sharpe={sharpe_ratio:.2f}, Score={score:.3f}")
             
             return {
@@ -329,12 +347,12 @@ class Database:
             
             for ticker in self.stocks:
                 data = self.get_stock_data(ticker)
-                if data and data['score'] > 0:  # Only include stocks with valid data
+                if data and data['score'] > 2.0:  # Only include stocks with good scores (scaled to 0-10)
                     rankings.append(data)
                     successful_fetches += 1
                     
-                    # Stop after getting enough stocks to avoid rate limits
-                    if successful_fetches >= limit * 2:  # Get 2x the limit to have options
+                    # Get more stocks to ensure we have quality picks
+                    if successful_fetches >= limit * 5:  # Get 5x the limit to have better options
                         break
             
             # Sort by score (highest first) and add rank
