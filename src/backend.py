@@ -172,7 +172,17 @@ async def get_rankings(
         rankings = get_rankings_simple(universe, limit)
         
         if rankings.empty:
-            raise HTTPException(status_code=404, detail=f"No rankings found for universe {universe}. Please populate the database first.")
+            # Auto-populate if no data found
+            logger.info(f"No rankings found for {universe}, auto-populating...")
+            try:
+                from simple_data import populate_universe_simple
+                populate_universe_simple(universe)
+                rankings = get_rankings_simple(universe, limit)
+            except Exception as e:
+                logger.error(f"Failed to auto-populate {universe}: {e}")
+            
+            if rankings.empty:
+                raise HTTPException(status_code=404, detail=f"No rankings found for universe {universe}. Please try again in a moment.")
         
         result = {
             "universe": universe,
