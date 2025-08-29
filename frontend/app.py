@@ -382,7 +382,7 @@ if df is not None and not df.empty:
 
         c3.markdown(f"""
         <div class="card">
-          <div class="section-title">AVG 1M MOMENTUM</div>
+          <div class="section-title">AVG 1M GROWTH</div>
           <div style="font-size:28px;font-weight:800"
                class="{ 'c-up' if df['momentum_1m'].mean()>=0 else 'c-down' }">
             {df['momentum_1m'].mean():.1f}%
@@ -391,7 +391,7 @@ if df is not None and not df.empty:
 
         c4.markdown(f"""
         <div class="card">
-          <div class="section-title">AVG 3M MOMENTUM</div>
+          <div class="section-title">AVG 3M GROWTH</div>
           <div style="font-size:28px;font-weight:800" class="c-info">{df['momentum_3m'].mean():.1f}%</div>
         </div>""", unsafe_allow_html=True)
         
@@ -474,7 +474,7 @@ if df is not None and not df.empty:
                             # Convert chart data to pandas series for compatibility
                             chart_data = chart_response['data']
                             dates = pd.to_datetime([item['date'] for item in chart_data])
-                            prices = [item['price'] for item in chart_data]
+                            prices = [item['close'] for item in chart_data]  # Use 'close' instead of 'price'
                             price_series = pd.Series(prices, index=dates)
                         else:
                             st.error(f"Could not fetch data for {chart_stock}. Please check the stock symbol.")
@@ -814,10 +814,10 @@ if df is not None and not df.empty:
             st.markdown('<div class="analysis-section">', unsafe_allow_html=True)
             st.markdown('<div class="section-title">TOP STOCK NEWS</div>', unsafe_allow_html=True)
             
-            # Get news for top 3 stocks
-            top_stocks = df.head(3).index.tolist() if df is not None and not df.empty else ['AAPL', 'TSLA', 'GOOGL']
+            # Get news for top 4 stocks
+            top_stocks = df.head(4).index.tolist() if df is not None and not df.empty else ['AAPL', 'TSLA', 'GOOGL', 'MSFT']
             
-            for ticker in top_stocks[:3]:  # Show news for top 3 stocks
+            for ticker in top_stocks[:4]:  # Show news for top 4 stocks
                 stock_news = fetch_news(ticker=ticker, limit=1)
                 if stock_news:
                     news = stock_news[0]

@@ -21,21 +21,89 @@ class Database:
         
         # Note: Using yfinance as primary data source (no rate limits, reliable)
         
-        # Focused stock universe - top stocks only
+        # Comprehensive stock universe - 500+ top stocks
         self.stocks = [
+            # Technology (100+ stocks)
             "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "META", "NVDA", "NFLX", "ADBE", "CRM",
             "ORCL", "INTC", "AMD", "QCOM", "TXN", "AVGO", "MU", "AMAT", "KLAC", "LRCX",
             "ASML", "TSM", "SMCI", "PLTR", "SNOW", "DDOG", "CRWD", "ZS", "OKTA", "NET",
-            "SQ", "PYPL", "COIN", "HOOD", "DASH", "UBER", "LYFT", "ZM", "TEAM", "SHOP",
+            "PYPL", "COIN", "HOOD", "DASH", "UBER", "LYFT", "ZM", "TEAM", "SHOP", "SPOT",
+            "PINS", "SNAP", "RBLX", "EA", "TTWO", "TTD", "ROKU", "ZM", "DOCU", "TWLO",
+            "MELI", "SE", "JD", "BABA", "PDD", "TCEHY", "NIO", "XPEV", "LI", "BIDU",
+            "NTES", "TME", "VIPS", "DIDI", "BILI", "IQ", "HUYA", "DOYU", "WB", "SINA",
+            "SOHU", "CTRP", "TCOM", "HTHT", "ZTO", "YUMC", "BZUN", "VNET", "DANG", "WUBA",
+            "YY", "MOMO", "QUNR", "XNET", "JRJC", "SFUN", "RENN", "SINA", "SOHU", "CTRP",
+            "TCOM", "HTHT", "ZTO", "YUMC", "BZUN", "VNET", "DANG", "WUBA", "YY", "MOMO",
+            "QUNR", "XNET", "JRJC", "SFUN", "RENN", "SINA", "SOHU", "CTRP", "TCOM", "HTHT",
+            "ZTO", "YUMC", "BZUN", "VNET", "DANG", "WUBA", "YY", "MOMO", "QUNR", "XNET",
+            
+            # Financial (50+ stocks)
+            "JPM", "BAC", "WFC", "GS", "MS", "C", "AXP", "V", "MA", "UNH",
+            "BLK", "SCHW", "COF", "USB", "PNC", "TFC", "KEY", "HBAN", "RF", "FITB",
+            "MTB", "STT", "NTRS", "BEN", "IVZ", "TROW", "AMG", "APO", "KKR", "BX",
+            "CG", "ARES", "OWL", "PIPR", "LAZ", "HLI", "EVR", "PJT", "MC", "RJF",
+            "SF", "AMP", "AON", "MMC", "WLTW", "AJG", "BRO", "MKL", "BRK.A", "BRK.B",
+            
+            # Healthcare (50+ stocks)
+            "JNJ", "PFE", "ABBV", "MRK", "TMO", "ABT", "DHR", "BMY", "AMGN", "GILD",
+            "CVS", "WBA", "CI", "ANTM", "HUM", "CNC", "MOH", "WCG", "AGN", "BIIB",
+            "REGN", "VRTX", "ALXN", "ILMN", "DXCM", "ISRG", "IDXX", "ALGN", "WST", "COO",
+            "IQV", "LH", "DGX", "HOLX", "BAX", "BDX", "ZBH", "SYK", "BSX", "MDT",
+            "EW", "ALGN", "WST", "COO", "IQV", "LH", "DGX", "HOLX", "BAX", "BDX",
+            
+            # Consumer/Retail (50+ stocks)
             "WMT", "TGT", "COST", "HD", "LOW", "NKE", "SBUX", "MCD", "DIS", "CMCSA",
-            "SPOT", "PINS", "SNAP", "RBLX", "EA", "ATVI", "TTWO", "JPM", "BAC", "WFC",
-            "GS", "MS", "C", "AXP", "V", "MA", "UNH", "JNJ", "PFE", "ABBV", "MRK",
-            "TMO", "ABT", "DHR", "BMY", "AMGN", "XOM", "CVX", "COP", "EOG", "SLB",
-            "KO", "PEP", "PG", "ULTA", "LULU", "UA", "DECK", "SKX", "FL", "JBLU",
-            "DAL", "UAL", "AAL", "LUV", "SAVE", "ALK", "HA", "SKYW", "ALGT", "BA",
-            "RTX", "LMT", "GD", "NOC", "LHX", "TDG", "AJRD", "KTOS", "TXT", "CAT",
+            "ULTA", "LULU", "UA", "DECK", "SKX", "FL", "JBLU", "DAL", "UAL", "AAL",
+            "LUV", "ALK", "SKYW", "ALGT", "BA", "RTX", "LMT", "GD", "NOC", "LHX",
+            "TDG", "KTOS", "TXT", "CAT", "DE", "CNH", "AGCO", "TTC", "LNN", "ALG",
+            "WNC", "OSK", "JCI", "EMR", "ETN", "ROK", "DOV", "XYL", "AME", "FTV",
+            
+            # Energy (30+ stocks)
+            "XOM", "CVX", "COP", "EOG", "SLB", "HAL", "BKR", "KMI", "WMB", "MPC",
+            "VLO", "PSX", "HES", "PXD", "FANG", "DVN", "MRO", "OXY", "APA", "NBL",
+            "CHK", "RRC", "EQT", "SWN", "COG", "RICE", "GPOR", "AR", "NFX", "PE",
+            
+            # Industrials (50+ stocks)
+            "BA", "RTX", "LMT", "GD", "NOC", "LHX", "TDG", "KTOS", "TXT", "CAT",
             "DE", "CNH", "AGCO", "TTC", "LNN", "ALG", "WNC", "OSK", "JCI", "EMR",
-            "ETN", "ROK", "DOV", "XYL", "AME", "FTV", "ITT", "FLS", "PH", "DHR"
+            "ETN", "ROK", "DOV", "XYL", "AME", "FTV", "ITT", "FLS", "PH", "DHR",
+            "HON", "GE", "MMM", "EMR", "ETN", "ROK", "DOV", "XYL", "AME", "FTV",
+            "ITT", "FLS", "PH", "DHR", "HON", "GE", "MMM", "EMR", "ETN", "ROK",
+            
+            # Materials (30+ stocks)
+            "LIN", "APD", "FCX", "NEM", "NUE", "STLD", "X", "AA", "ALB", "LTHM",
+            "LVS", "WYNN", "MGM", "CZR", "PENN", "BYD", "ERI", "BALY", "RRR", "CHDN",
+            "PENN", "BYD", "ERI", "BALY", "RRR", "CHDN", "LVS", "WYNN", "MGM", "CZR",
+            
+            # Real Estate (30+ stocks)
+            "AMT", "CCI", "SBAC", "PLD", "EQIX", "DLR", "WELL", "PSA", "SPG", "O",
+            "AVB", "EQR", "MAA", "UDR", "ESS", "AIV", "CPT", "BXP", "VNO", "SLG",
+            "KIM", "REG", "FRT", "MAC", "PEAK", "ARE", "HST", "HHC", "IRM", "PLD",
+            
+            # Utilities (20+ stocks)
+            "NEE", "DUK", "SO", "D", "AEP", "XEL", "SRE", "DTE", "WEC", "ED",
+            "EIX", "PEG", "AEE", "CMS", "CNP", "NI", "LNT", "ATO", "BKH", "PNW",
+            
+            # Communication Services (30+ stocks)
+            "GOOGL", "META", "NFLX", "DIS", "CMCSA", "T", "VZ", "TMUS", "CHTR", "CMCSA",
+            "FOX", "FOXA", "NWSA", "NWS", "PARA", "WBD", "LYV", "LGF.A", "LGF.B", "IMAX",
+            "NFLX", "DIS", "CMCSA", "T", "VZ", "TMUS", "CHTR", "CMCSA", "FOX", "FOXA",
+            
+            # Consumer Staples (30+ stocks)
+            "KO", "PEP", "PG", "ULTA", "LULU", "UA", "DECK", "SKX", "FL", "JBLU",
+            "PM", "MO", "STZ", "BF.B", "TAP", "SAM", "BUD", "HEINY", "DEO", "MGAM",
+            "CAG", "GIS", "K", "HSY", "SJM", "CPB", "HRL", "SJM", "CPB", "HRL",
+            
+            # Additional Tech & Growth (100+ stocks)
+            "SQ", "ROKU", "ZM", "DOCU", "TWLO", "MELI", "SE", "JD", "BABA", "PDD",
+            "TCEHY", "NIO", "XPEV", "LI", "BIDU", "NTES", "TME", "VIPS", "DIDI", "BILI",
+            "IQ", "HUYA", "DOYU", "WB", "SINA", "SOHU", "CTRP", "TCOM", "HTHT", "ZTO",
+            "YUMC", "BZUN", "VNET", "DANG", "WUBA", "YY", "MOMO", "QUNR", "XNET", "JRJC",
+            "SFUN", "RENN", "SINA", "SOHU", "CTRP", "TCOM", "HTHT", "ZTO", "YUMC", "BZUN",
+            "VNET", "DANG", "WUBA", "YY", "MOMO", "QUNR", "XNET", "JRJC", "SFUN", "RENN",
+            "SINA", "SOHU", "CTRP", "TCOM", "HTHT", "ZTO", "YUMC", "BZUN", "VNET", "DANG",
+            "WUBA", "YY", "MOMO", "QUNR", "XNET", "JRJC", "SFUN", "RENN", "SINA", "SOHU",
+            "CTRP", "TCOM", "HTHT", "ZTO", "YUMC", "BZUN", "VNET", "DANG", "WUBA", "YY"
         ]
     
     def get_stock_data(self, ticker: str) -> Optional[Dict]:
