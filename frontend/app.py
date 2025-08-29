@@ -22,12 +22,28 @@ bloomberg_template = dict(
         paper_bgcolor="#0B0F10",
         plot_bgcolor="#0B0F10",
         font=dict(family="JetBrains Mono, Menlo, monospace", color="#D7E1E8", size=13),
-        xaxis=dict(gridcolor="#1C2328", zerolinecolor="#1C2328", linecolor="#2A3338", tickcolor="#2A3338"),
-        yaxis=dict(gridcolor="#1C2328", zerolinecolor="#1C2328", linecolor="#2A3338", tickcolor="#2A3338"),
-        legend=dict(bgcolor="#0B0F10", bordercolor="#2A3338"),
+        xaxis=dict(
+            gridcolor="#1C2328", 
+            zerolinecolor="#1C2328", 
+            linecolor="#2A3338", 
+            tickcolor="#2A3338",
+            tickfont=dict(color="#D7E1E8"),
+            titlefont=dict(color="#D7E1E8")
+        ),
+        yaxis=dict(
+            gridcolor="#1C2328", 
+            zerolinecolor="#1C2328", 
+            linecolor="#2A3338", 
+            tickcolor="#2A3338",
+            tickfont=dict(color="#D7E1E8"),
+            titlefont=dict(color="#D7E1E8")
+        ),
+        legend=dict(bgcolor="#0B0F10", bordercolor="#2A3338", font=dict(color="#D7E1E8")),
         margin=dict(l=40, r=30, t=40, b=40),
         hoverlabel=dict(bgcolor="#111417", bordercolor="#2A3338", font_color="#D7E1E8"),
-        colorway=["#00E676", "#00C2FF", "#FFB000", "#FF4D4D", "#A78BFA", "#64FFDA"]
+        colorway=["#00E676", "#00C2FF", "#FFB000", "#FF4D4D", "#A78BFA", "#64FFDA"],
+        title=dict(font=dict(color="#D7E1E8")),
+        annotations=[dict(font=dict(color="#D7E1E8"))]
     )
 )
 pio.templates["bloomberg"] = bloomberg_template
@@ -290,6 +306,28 @@ html, body, [data-testid="stAppViewContainer"]{
   color: var(--text) !important;
   font-size: 14px !important;
   font-weight: 600 !important;
+}
+
+/* Chart Container Styling */
+[data-testid="stPlotlyChart"] {
+  background: var(--panel) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 12px !important;
+  padding: 16px !important;
+  margin: 8px 0 !important;
+}
+
+[data-testid="stPlotlyChart"] iframe {
+  background: var(--panel) !important;
+}
+
+/* Ensure chart elements are dark */
+.js-plotly-plot .plotly .main-svg {
+  background: var(--panel) !important;
+}
+
+.js-plotly-plot .plotly .bg {
+  background: var(--panel) !important;
 }
 
 #MainMenu, header, footer{ visibility: hidden; }
@@ -617,7 +655,8 @@ if df is not None and not df.empty:
                         yaxis_title="Price ($)",
                         height=400,
                         showlegend=False,
-                        hovermode='x unified'
+                        hovermode='x unified',
+                        template="bloomberg"
                     )
                     
                     st.plotly_chart(fig, use_container_width=True, theme=None)
