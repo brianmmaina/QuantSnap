@@ -170,6 +170,9 @@ class DataPipeline:
                 if 'date' in factors_df.columns:
                     factors_df['date'] = pd.to_datetime(factors_df['date']).dt.date
                 factors_df = create_composite_reputation_factors(factors_df)
+                # Ensure date column is still properly formatted after reputation factors
+                if 'date' in factors_df.columns:
+                    factors_df['date'] = pd.to_datetime(factors_df['date']).dt.date
                 self.db.insert_daily_factors(factors_df)
                 
                 # Step 5: Calculate rankings
