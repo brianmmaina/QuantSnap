@@ -795,9 +795,9 @@ if df is not None and not df.empty:
                     st.markdown('<div class="section-title">OVERVIEW</div>', unsafe_allow_html=True)
                     
                     score = stock_data.get('score', 0)
-                                         # These are actual stock price growth percentages from backend
-                     growth_1m = stock_data.get('momentum_1m', 0)  # 1-month price growth %
-                     growth_3m = stock_data.get('momentum_3m', 0)  # 3-month price growth %
+                    # These are actual stock price growth percentages from backend
+                    growth_1m = stock_data.get('momentum_1m', 0)  # 1-month price growth %
+                    growth_3m = stock_data.get('momentum_3m', 0)  # 3-month price growth %
                     price = stock_data.get('price', 0)
                     
                     # Determine sentiment
