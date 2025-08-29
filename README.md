@@ -1,6 +1,6 @@
 # AI Daily Draft - Stock Rankings
 
-A data-driven stock ranking application powered by quantitative factors and AI analysis. Built with Python, FastAPI, PostgreSQL, and Streamlit. Following the basketball scout pattern with clean data processing and API-first design.
+A data-driven stock ranking application powered by quantitative factors and AI analysis. Built with Python, FastAPI, and Streamlit with clean data processing and API-first design.
 
 ## Features
 
@@ -49,40 +49,30 @@ A data-driven stock ranking application powered by quantitative factors and AI a
 
 - **Python 3.11+**: Core application logic
 - **FastAPI**: RESTful API backend
-- **PostgreSQL**: Clean, normalized database
 - **Streamlit**: Web interface and deployment
 - **Pandas & NumPy**: Data manipulation and analysis
 - **yfinance**: Real-time stock data
 - **scikit-learn**: Statistical calculations
 - **Plotly**: Interactive charts
-- **Google Gemini AI**: Intelligent analysis
-- **SQLAlchemy**: Database ORM
-- **Redis**: Caching (optional)
+- **In-Memory Processing**: Simple, fast data management
+- **CSV Storage**: Lightweight data persistence
 
 ## Project Structure
 
 ```
 ai-daily-draft/
-├── src/                  # Main application source
-│   ├── frontend.py      # Streamlit frontend application
-│   ├── backend.py       # FastAPI backend application
-│   └── core/            # Core business logic
-│       ├── factors.py   # Factor calculations
-│       ├── scoring.py   # Ranking algorithms
-│       ├── universe.py  # Stock universe definitions
-│       └── ai_analysis.py # AI-powered analysis
-├── infrastructure/       # Infrastructure & data layer
-│   ├── database.py      # PostgreSQL database operations
-│   ├── data_pipeline.py # Data processing pipeline
-│   └── schema.sql       # Database schema
-├── data/                # Static data files
-│   └── universes/       # Stock universe CSV files
-├── scripts/             # Utility scripts
-│   └── start_app.py     # Unified startup script
-├── requirements.txt     # Python dependencies
-├── env.template         # Environment template
-├── .gitignore          # Git ignore rules
-└── README.md           # Documentation
+├── app/                 # Backend application
+│   └── main.py         # FastAPI backend (simplified)
+├── frontend/           # Frontend application
+│   └── app.py          # Streamlit frontend (simplified)
+├── data/               # Static data files
+│   └── universes/      # Stock universe CSV files
+├── requirements.txt    # Python dependencies
+├── render.yaml         # Render deployment configuration
+├── Dockerfile          # Docker configuration
+├── env.template        # Environment template
+├── .gitignore         # Git ignore rules
+└── README.md          # Documentation
 ```
 
 ## Quick Start
