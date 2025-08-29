@@ -1,0 +1,274 @@
+Ticker,Name
+AAPL,Apple Inc
+MSFT,Microsoft Corporation
+GOOGL,Alphabet Inc
+AMZN,Amazon.com Inc
+NVDA,NVIDIA Corporation
+TSLA,Tesla Inc
+META,Meta Platforms Inc
+BRK-B,Berkshire Hathaway Inc
+UNH,UnitedHealth Group Inc
+JNJ,Johnson & Johnson
+JPM,JPMorgan Chase & Co
+V,Visa Inc
+PG,Procter & Gamble Co
+HD,Home Depot Inc
+MA,Mastercard Inc
+DIS,Walt Disney Co
+PYPL,PayPal Holdings Inc
+ADBE,Adobe Inc
+CRM,Salesforce Inc
+NFLX,Netflix Inc
+ABT,Abbott Laboratories
+PFE,Pfizer Inc
+KO,Coca-Cola Co
+PEP,PepsiCo Inc
+AVGO,Broadcom Inc
+TMO,Thermo Fisher Scientific Inc
+COST,Costco Wholesale Corp
+ABBV,AbbVie Inc
+WMT,Walmart Inc
+ACN,Accenture PLC
+DHR,Danaher Corp
+NEE,NextEra Energy Inc
+LLY,Eli Lilly and Co
+TXN,Texas Instruments Inc
+HON,Honeywell International Inc
+UNP,Union Pacific Corp
+LOW,Lowe's Companies Inc
+SPGI,S&P Global Inc
+ISRG,Intuitive Surgical Inc
+GILD,Gilead Sciences Inc
+BMY,Bristol-Myers Squibb Co
+RTX,Raytheon Technologies Corp
+QCOM,Qualcomm Inc
+AMAT,Applied Materials Inc
+ADI,Analog Devices Inc
+MDLZ,Mondelez International Inc
+BKNG,Booking Holdings Inc
+REGN,Regeneron Pharmaceuticals Inc
+CMCSA,Comcast Corp
+KLAC,KLA Corp
+VRTX,Vertex Pharmaceuticals Inc
+PANW,Palo Alto Networks Inc
+SNPS,Synopsys Inc
+CDNS,Cadence Design Systems Inc
+MU,Micron Technology Inc
+ORCL,Oracle Corp
+CSCO,Cisco Systems Inc
+INTC,Intel Corp
+IBM,International Business Machines Corp
+GE,General Electric Co
+CAT,Caterpillar Inc
+DE,Deere & Co
+BA,Boeing Co
+GS,Goldman Sachs Group Inc
+MS,Morgan Stanley
+BLK,BlackRock Inc
+AXP,American Express Co
+C,Citigroup Inc
+WFC,Wells Fargo & Co
+BAC,Bank of America Corp
+USB,U.S. Bancorp
+PNC,PNC Financial Services Group Inc
+T,AT&T Inc
+VZ,Verizon Communications Inc
+CME,CME Group Inc
+ICE,Intercontinental Exchange Inc
+SPY,SPDR S&P 500 ETF
+QQQ,Invesco QQQ Trust
+IWM,iShares Russell 2000 ETF
+VTI,Vanguard Total Stock Market ETF
+VOO,Vanguard S&P 500 ETF
+VEA,Vanguard FTSE Developed Markets ETF
+VWO,Vanguard FTSE Emerging Markets ETF
+BND,Vanguard Total Bond Market ETF
+TLT,iShares 20+ Year Treasury Bond ETF
+GLD,SPDR Gold Shares
+SLV,iShares Silver Trust
+USO,United States Oil Fund LP
+UNG,United States Natural Gas Fund LP
+UUP,Invesco DB US Dollar Index Bullish Fund
+TBT,ProShares UltraShort 20+ Year Treasury
+TMF,Direxion Daily 20+ Year Treasury Bull 3X Shares
+SOXL,Direxion Daily Semiconductor Bull 3X Shares
+TQQQ,ProShares UltraPro QQQ
+SQQQ,ProShares UltraPro Short QQQ
+AMD,Advanced Micro Devices Inc
+NFLX,Netflix Inc
+ZM,Zoom Video Communications Inc
+SHOP,Shopify Inc
+ROKU,Roku Inc
+SNAP,Snap Inc
+PLTR,Palantir Technologies Inc
+COIN,Coinbase Global Inc
+RBLX,Roblox Corporation
+HOOD,Robinhood Markets Inc
+LCID,Lucid Group Inc
+RIVN,Rivian Automotive Inc
+NIO,NIO Inc
+XPEV,Xpeng Inc
+LI,Li Auto Inc
+BYDDF,BYD Company Limited
+CHPT,ChargePoint Holdings Inc
+BLNK,Blink Charging Co
+WKHS,Workhorse Group Inc
+NKLA,Nikola Corporation
+HYLN,Hyliion Holdings Corp
+QS,QuantumScape Corporation
+RIDE,Lordstown Motors Corp
+CANOO,Canoo Inc
+ARVL,Arrival Group
+EVGO,EVgo Inc
+VLTA,Volta Inc
+UBER,Uber Technologies Inc
+SPOT,Spotify Technology SA
+SQ,Block Inc
+TWTR,Tesla Inc
+CRWD,CrowdStrike Holdings Inc
+ZS,Zscaler Inc
+OKTA,Okta Inc
+TEAM,Atlassian Corporation PLC
+SNOW,Snowflake Inc
+MDB,MongoDB Inc
+NET,Cloudflare Inc
+DDOG,Datadog Inc
+PLTR,Palantir Technologies Inc
+PATH,UiPath Inc
+RBLX,Roblox Corporation
+HOOD,Robinhood Markets Inc
+COIN,Coinbase Global Inc
+SQ,Block Inc
+PYPL,PayPal Holdings Inc
+V,Visa Inc
+MA,Mastercard Inc
+AXP,American Express Co
+DFS,Discover Financial Services
+COF,Capital One Financial Corp
+USB,U.S. Bancorp
+PNC,PNC Financial Services Group Inc
+TFC,Truist Financial Corp
+KEY,KeyCorp
+HBAN,Huntington Bancshares Inc
+RF,Regions Financial Corp
+CMA,Comerica Inc
+ZION,Zions Bancorp NA
+MTB,M&T Bank Corp
+FITB,Fifth Third Bancorp
+BBT,Truist Financial Corp
+STI,SunTrust Banks Inc
+NTRS,Northern Trust Corp
+STT,State Street Corp
+BK,Bank of New York Mellon Corp
+CIT,Citizens Financial Group Inc
+ALLY,Ally Financial Inc
+AIG,American International Group Inc
+MET,MetLife Inc
+PRU,Prudential Financial Inc
+HIG,Hartford Financial Services Group Inc
+TRV,Travelers Companies Inc
+ALL,Allstate Corp
+PGR,Progressive Corp
+CB,Chubb Ltd
+AFL,Aflac Inc
+UNM,Unum Group
+PFG,Principal Financial Group Inc
+LNC,Lincoln National Corp
+VOYA,Voya Financial Inc
+BEN,Franklin Resources Inc
+IVZ,Invesco Ltd
+TROW,T. Rowe Price Group Inc
+AMG,Affiliated Managers Group Inc
+JEF,Jefferies Financial Group Inc
+LPLA,LPL Financial Holdings Inc
+RJF,Raymond James Financial Inc
+SCHW,Charles Schwab Corp
+ETFC,E*TRADE Financial Corp
+AMTD,TD Ameritrade Holding Corp
+IBKR,Interactive Brokers Group Inc
+MKTX,MarketAxess Holdings Inc
+CBOE,Cboe Global Markets Inc
+NDAQ,Nasdaq Inc
+CME,CME Group Inc
+ICE,Intercontinental Exchange Inc
+MCO,Moody's Corporation
+SPGI,S&P Global Inc
+FDS,FactSet Research Systems Inc
+MORN,Morningstar Inc
+TW,Tradeweb Markets Inc
+VRSK,Verisk Analytics Inc
+INFO,IHS Markit Ltd
+FTNT,Fortinet Inc
+CHKP,Check Point Software Technologies Ltd
+SYMC,Symantec Corp
+VRSN,VeriSign Inc
+AKAM,Akamai Technologies Inc
+FFIV,F5 Networks Inc
+JNPR,Juniper Networks Inc
+CIEN,Ciena Corporation
+COMM,CommScope Holding Co Inc
+ANET,Arista Networks Inc
+NTAP,NetApp Inc
+WDC,Western Digital Corp
+STX,Seagate Technology PLC
+MU,Micron Technology Inc
+AMD,Advanced Micro Devices Inc
+INTC,Intel Corp
+NVDA,NVIDIA Corporation
+QCOM,Qualcomm Inc
+AVGO,Broadcom Inc
+TXN,Texas Instruments Inc
+ADI,Analog Devices Inc
+MCHP,Microchip Technology Inc
+ON,ON Semiconductor Corp
+SWKS,Skyworks Solutions Inc
+QRVO,Qorvo Inc
+CRUS,Cirrus Logic Inc
+SYNA,Synaptics Inc
+XLNX,Xilinx Inc
+ALTR,Altera Corp
+LSCC,Lattice Semiconductor Corp
+AMAT,Applied Materials Inc
+KLAC,KLA Corp
+LRCX,Lam Research Corp
+ASML,ASML Holding NV
+TER,Teradyne Inc
+COHU,Cohu Inc
+KLAC,KLA Corp
+AMKR,Amkor Technology Inc
+NXPI,NXP Semiconductors NV
+STM,STMicroelectronics NV
+TSM,Taiwan Semiconductor Manufacturing Co Ltd
+UMC,United Microelectronics Corp
+SMIC,Semiconductor Manufacturing International Corp
+ASX,ASE Technology Holding Co Ltd
+INTC,Intel Corp
+AMD,Advanced Micro Devices Inc
+NVDA,NVIDIA Corporation
+QCOM,Qualcomm Inc
+AVGO,Broadcom Inc
+TXN,Texas Instruments Inc
+ADI,Analog Devices Inc
+MCHP,Microchip Technology Inc
+ON,ON Semiconductor Corp
+SWKS,Skyworks Solutions Inc
+QRVO,Qorvo Inc
+CRUS,Cirrus Logic Inc
+SYNA,Synaptics Inc
+XLNX,Xilinx Inc
+ALTR,Altera Corp
+LSCC,Lattice Semiconductor Corp
+AMAT,Applied Materials Inc
+KLAC,KLA Corp
+LRCX,Lam Research Corp
+ASML,ASML Holding NV
+TER,Teradyne Inc
+COHU,Cohu Inc
+KLAC,KLA Corp
+AMKR,Amkor Technology Inc
+NXPI,NXP Semiconductors NV
+STM,STMicroelectronics NV
+TSM,Taiwan Semiconductor Manufacturing Co Ltd
+UMC,United Microelectronics Corp
+SMIC,Semiconductor Manufacturing International Corp
+ASX,ASE Technology Holding Co Ltd
