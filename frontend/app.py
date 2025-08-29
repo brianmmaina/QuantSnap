@@ -60,6 +60,7 @@ def api_request(endpoint: str, params: Dict = None) -> Dict:
         response.raise_for_status()
         return response.json()
     except Exception as e:
+        st.error(f"API request failed for {endpoint}: {str(e)}")
         return {}
 
 def get_rankings_from_api(universe: str, limit: int = 50) -> pd.DataFrame:
@@ -67,7 +68,10 @@ def get_rankings_from_api(universe: str, limit: int = 50) -> pd.DataFrame:
     data = api_request(f"/rankings/{universe}", {"limit": limit})
     if data and "rankings" in data:
         return pd.DataFrame(data["rankings"])
-    return pd.DataFrame()
+    else:
+        # Debug: log what we received
+        st.error(f"API request failed or returned invalid data: {data}")
+        return pd.DataFrame()
 
 def get_stock_data_from_api(ticker: str) -> Dict:
     """Get stock data from API"""
@@ -633,20 +637,37 @@ if 'chart_period' not in st.session_state:
 
 df = get_rankings_from_api("world_top_stocks", 500)
 
+# Debug: show what we got
+if df is not None and not df.empty:
+    st.sidebar.success(f"Successfully loaded {len(df)} stocks from API")
+else:
+    st.sidebar.error("Failed to load rankings from API")
+    # Try a smaller request as fallback
+    df = get_rankings_from_api("world_top_stocks", 50)
+    if df is not None and not df.empty:
+        st.sidebar.warning(f"Loaded {len(df)} stocks with fallback request")
+
 if df is not None and not df.empty:
     # Show data status
     st.sidebar.success(f"Data loaded: {len(df)} stocks")
     st.sidebar.info(f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
     
+    # Debug: show DataFrame info
+    st.sidebar.info(f"DataFrame columns: {list(df.columns)}")
+    st.sidebar.info(f"DataFrame shape: {df.shape}")
+    
     # Normalize tickers to uppercase and strip
     if 'ticker' in df.columns:
         df['ticker'] = df['ticker'].astype(str).str.upper().str.strip()
         df = df.drop_duplicates(subset=['ticker']).set_index('ticker')
+        st.sidebar.info(f"After ticker processing: {len(df)} stocks")
 
     # Coerce score to numeric
     if 'score' in df.columns:
         df['score'] = pd.to_numeric(df['score'], errors='coerce')
         df = df.dropna(subset=['score'])
+        st.sidebar.info(f"After score processing: {len(df)} stocks")
+        
         # If scores > 10 then they're 0–100 scale; convert for display only
         score_scale = 10 if df['score'].max() <= 10 else 100
         
