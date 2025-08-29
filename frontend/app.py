@@ -34,7 +34,7 @@ pio.templates["bloomberg"] = bloomberg_template
 pio.templates.default = "bloomberg"
 
 # API Configuration
-API_BASE_URL = os.getenv('API_BASE_URL', 'http://localhost:8000')
+API_BASE_URL = os.getenv('API_BASE_URL', 'https://quantsnap-backend.onrender.com')
 
 def api_request(endpoint: str, params: Dict = None) -> Dict:
     """Make API request to backend"""
