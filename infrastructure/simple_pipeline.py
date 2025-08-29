@@ -43,6 +43,8 @@ class SimpleDataPipeline:
                 # Ensure batch is a list of strings
                 batch = [str(ticker) for ticker in batch if ticker]
                 logger.info(f"Downloading batch: {batch}")
+                logger.info(f"Batch type: {type(batch)}, length: {len(batch)}")
+                logger.info(f"First ticker: {batch[0] if batch else 'None'}")
                 
                 data = yf.download(
                     batch,
@@ -136,6 +138,7 @@ class SimpleDataPipeline:
             tickers = [ticker for ticker in tickers if ticker and len(ticker) <= 5]  # Basic validation
             
             logger.info(f"Processing {len(tickers)} tickers for {universe_name}")
+            logger.info(f"Tickers: {tickers[:10]}...")  # Log first 10 tickers
             
             # Fetch stock data
             stock_data = self.fetch_stock_data(tickers)
