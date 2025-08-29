@@ -728,9 +728,11 @@ if df is not None and not df.empty:
                         x=chart_data.index,
                         y=chart_data.values,
                         mode='lines',
-                        line=dict(color='#00E676', width=2),
+                        line=dict(color='#00FF88', width=3),  # Brighter green with thicker line
                         name=f'{chart_stock} Price',
-                        hovertemplate='<b>%{x}</b><br>Price: $%{y:.2f}<extra></extra>'
+                        hovertemplate='<b>%{x}</b><br>Price: $%{y:.2f}<extra></extra>',
+                        fill='tonexty',  # Add subtle fill below the line
+                        fillcolor='rgba(0, 255, 136, 0.1)'  # Very light green fill
                     ))
                     
                     # Get company name if available
@@ -759,7 +761,17 @@ if df is not None and not df.empty:
                         height=400,
                         showlegend=False,
                         hovermode='x unified',
-                        template="bloomberg"
+                        template="bloomberg",
+                        plot_bgcolor='rgba(0,0,0,0)',  # Transparent plot background
+                        paper_bgcolor='rgba(0,0,0,0)',  # Transparent paper background
+                        xaxis=dict(
+                            gridcolor='rgba(255,255,255,0.1)',  # Subtle white grid
+                            zerolinecolor='rgba(255,255,255,0.1)'
+                        ),
+                        yaxis=dict(
+                            gridcolor='rgba(255,255,255,0.1)',  # Subtle white grid
+                            zerolinecolor='rgba(255,255,255,0.1)'
+                        )
                     )
                     
                     st.plotly_chart(fig, use_container_width=True, theme=None)
@@ -770,15 +782,42 @@ if df is not None and not df.empty:
                     change = current_price - start_price
                     change_pct = (change / start_price) * 100
                     
+                    # Chart metrics using existing card styling
                     col1, col2, col3, col4 = st.columns(4)
+                    
                     with col1:
-                        st.metric("Current Price", f"${current_price:.2f}")
+                        st.markdown(f"""
+                        <div class="card" style="text-align: center;">
+                            <div class="c-muted" style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Current Price</div>
+                            <div style="font-size: 24px; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: var(--text);">${current_price:.2f}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
                     with col2:
-                        st.metric("Change", f"${change:+.2f}")
+                        change_color = "var(--up)" if change >= 0 else "var(--down)"
+                        st.markdown(f"""
+                        <div class="card" style="text-align: center;">
+                            <div class="c-muted" style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Change</div>
+                            <div style="font-size: 24px; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: {change_color};">${change:+.2f}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
                     with col3:
-                        st.metric("Change %", f"{change_pct:+.2f}%")
+                        change_color = "var(--up)" if change_pct >= 0 else "var(--down)"
+                        st.markdown(f"""
+                        <div class="card" style="text-align: center;">
+                            <div class="c-muted" style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Change %</div>
+                            <div style="font-size: 24px; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: {change_color};">{change_pct:+.2f}%</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
                     with col4:
-                        st.metric("Period", period_name)
+                        st.markdown(f"""
+                        <div class="card" style="text-align: center;">
+                            <div class="c-muted" style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Period</div>
+                            <div style="font-size: 24px; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: var(--text);">{period_name}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
                         
                 else:
                     st.markdown('<div class="alert alert-warning">Insufficient price data for chart</div>', unsafe_allow_html=True)
