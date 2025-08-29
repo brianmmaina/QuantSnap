@@ -61,10 +61,10 @@ async def startup_event():
     """Initialize on startup"""
     logger.info("QuantSnap API starting up...")
     
-    # Update rankings on startup
-    logger.info("Updating stock rankings...")
-    rankings = db.update_rankings("world_top_stocks")
-    logger.info(f"Updated {len(rankings)} stocks")
+    # Update all data on startup
+    logger.info("Updating all stock data...")
+    rankings = db.update_all_data("world_top_stocks")
+    logger.info(f"Updated {len(rankings)} stocks with 67/33 factor breakdown")
 
 @app.get("/", response_model=RootResponse)
 async def root():
@@ -72,7 +72,7 @@ async def root():
     return RootResponse(
         name="QuantSnap API",
         version="1.0.0",
-        description="Quantitative stock analysis API with AI",
+        description="Quantitative stock analysis API with 67/33 factor breakdown",
         status="running"
     )
 
@@ -139,6 +139,75 @@ async def analyze_stock(ticker: str):
         logger.error(f"Error analyzing stock {ticker}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/factors/traditional")
+async def get_traditional_factors():
+    """Get traditional factors data (67% weight)"""
+    try:
+        import pandas as pd
+        factors_file = db.traditional_factors_file
+        if factors_file.exists():
+            df = pd.read_csv(factors_file)
+            return {
+                "factors": df.to_dict('records'),
+                "count": len(df),
+                "weight": "67%",
+                "description": "Traditional quantitative factors including momentum, volatility, volume, and Sharpe ratio",
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            raise HTTPException(status_code=404, detail="Traditional factors not found")
+    except Exception as e:
+        logger.error(f"Error getting traditional factors: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/factors/reputation")
+async def get_reputation_factors():
+    """Get reputation factors data (33% weight)"""
+    try:
+        import pandas as pd
+        factors_file = db.reputation_factors_file
+        if factors_file.exists():
+            df = pd.read_csv(factors_file)
+            return {
+                "factors": df.to_dict('records'),
+                "count": len(df),
+                "weight": "33%",
+                "description": "Reputation factors including financial health, market position, and growth stability",
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            raise HTTPException(status_code=404, detail="Reputation factors not found")
+    except Exception as e:
+        logger.error(f"Error getting reputation factors: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/factors/breakdown")
+async def get_factor_breakdown():
+    """Get factor breakdown explanation"""
+    return {
+        "traditional_factors": {
+            "weight": "67%",
+            "components": {
+                "momentum_1m": "20% - 1-month price momentum",
+                "momentum_3m": "15% - 3-month price momentum", 
+                "sharpe_ratio": "25% - Risk-adjusted returns",
+                "volume": "10% - Trading volume",
+                "volatility": "10% - Price volatility (inverse)"
+            },
+            "description": "Quantitative market performance indicators"
+        },
+        "reputation_factors": {
+            "weight": "33%",
+            "components": {
+                "financial_health": "40% - Debt ratios, ROE, ROA",
+                "market_position": "30% - Market cap, valuation ratios",
+                "growth_stability": "30% - Revenue growth, margins, dividends"
+            },
+            "description": "Company fundamentals and stability indicators"
+        },
+        "composite_score": "Combined weighted score for final ranking"
+    }
+
 @app.get("/news/market")
 async def get_market_news():
     """Get general market news"""
@@ -204,12 +273,12 @@ async def get_universes():
 
 @app.post("/populate", response_model=PopulateResponse)
 async def populate_data():
-    """Update stock data"""
+    """Update all stock data"""
     try:
-        rankings = db.update_rankings("world_top_stocks")
+        rankings = db.update_all_data("world_top_stocks")
         return PopulateResponse(
             status="success",
-            message=f"Updated {len(rankings)} stocks",
+            message=f"Updated {len(rankings)} stocks with 67/33 factor breakdown",
             timestamp=datetime.now().isoformat()
         )
     except Exception as e:
@@ -220,10 +289,10 @@ async def populate_data():
 async def populate_universe(universe: str):
     """Update stock data for specific universe"""
     try:
-        rankings = db.update_rankings(universe)
+        rankings = db.update_all_data(universe)
         return PopulateResponse(
             status="success",
-            message=f"Updated {len(rankings)} stocks for {universe}",
+            message=f"Updated {len(rankings)} stocks for {universe} with 67/33 factor breakdown",
             timestamp=datetime.now().isoformat()
         )
     except Exception as e:
