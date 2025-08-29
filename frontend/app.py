@@ -748,70 +748,7 @@ if df is not None and not df.empty:
                 else:
                     st.markdown('<div class="alert alert-info">No recent news available for this stock.</div>', unsafe_allow_html=True)
         
-        # Portfolio Analysis Section
-        neon_divider("PORTFOLIO ANALYSIS")
-        
-        # Portfolio Analysis Cards
-        col1, col2, col3, col4 = st.columns(4)
-        
-        # Calculate portfolio metrics
-        if df is not None and not df.empty:
-            top_10_df = df.head(10)
-            avg_score = top_10_df['score'].mean()
-            avg_momentum = top_10_df['momentum_1m'].mean()
-            avg_sharpe = top_10_df.get('sharpe_ratio', pd.Series([0]*len(top_10_df))).mean()
-            total_market_cap = top_10_df.get('market_cap', pd.Series([0]*len(top_10_df))).sum()
-            
-            col1.markdown(f"""
-            <div class="card">
-              <div class="section-title">PORTFOLIO SCORE</div>
-              <div style="font-size:28px;font-weight:800" class="c-up">{avg_score:.3f}</div>
-              <div class="c-muted" style="font-size:12px">Average Score</div>
-            </div>""", unsafe_allow_html=True)
 
-            col2.markdown(f"""
-            <div class="card">
-              <div class="section-title">AVG MOMENTUM</div>
-              <div style="font-size:28px;font-weight:800" class="{ 'c-up' if avg_momentum>=0 else 'c-down' }">{avg_momentum:.1f}%</div>
-              <div class="c-muted" style="font-size:12px">1-Month Return</div>
-            </div>""", unsafe_allow_html=True)
-
-            col3.markdown(f"""
-            <div class="card">
-              <div class="section-title">RISK-ADJUSTED</div>
-              <div style="font-size:28px;font-weight:800" class="c-info">{avg_sharpe:.2f}</div>
-              <div class="c-muted" style="font-size:12px">Avg Sharpe Ratio</div>
-            </div>""", unsafe_allow_html=True)
-
-            col4.markdown(f"""
-            <div class="card">
-              <div class="section-title">MARKET CAP</div>
-              <div style="font-size:28px;font-weight:800" class="c-warn">${total_market_cap/1e12:.1f}T</div>
-              <div class="c-muted" style="font-size:12px">Total Value</div>
-            </div>""", unsafe_allow_html=True)
-        
-        # Portfolio Composition Chart
-        if df is not None and not df.empty:
-            top_10_df = df.head(10)
-            
-            # Create sector breakdown
-            sectors = top_10_df.get('sector', pd.Series(['Unknown']*len(top_10_df))).value_counts()
-            
-            fig = go.Figure(data=[go.Pie(
-                labels=sectors.index,
-                values=sectors.values,
-                hole=0.4,
-                marker_colors=['#00E676', '#00C2FF', '#FFB000', '#FF4D4D', '#A78BFA', '#64FFDA']
-            )])
-            
-            fig.update_layout(
-                title="Portfolio Sector Allocation",
-                height=400,
-                showlegend=True,
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-            )
-            
-            st.plotly_chart(fig, use_container_width=True, theme=None)
         
         # News Section
         neon_divider("MARKET NEWS")
