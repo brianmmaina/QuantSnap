@@ -100,6 +100,11 @@ class StockDatabase:
         """Insert daily price data"""
         # Clean and prepare data
         df_clean = df.reset_index()
+        
+        # Handle both 'date' and 'Date' column names
+        if 'Date' in df_clean.columns:
+            df_clean = df_clean.rename(columns={'Date': 'date'})
+        
         df_clean['date'] = pd.to_datetime(df_clean['date']).dt.date
         
         # Rename columns to match schema
@@ -119,6 +124,11 @@ class StockDatabase:
     def insert_daily_factors(self, df: pd.DataFrame) -> None:
         """Insert calculated factors"""
         df_clean = df.reset_index()
+        
+        # Handle both 'date' and 'Date' column names
+        if 'Date' in df_clean.columns:
+            df_clean = df_clean.rename(columns={'Date': 'date'})
+        
         df_clean['date'] = pd.to_datetime(df_clean['date']).dt.date
         
         self.db.insert_dataframe(df_clean, 'daily_factors', if_exists='append')

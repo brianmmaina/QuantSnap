@@ -62,8 +62,17 @@ def api_request(endpoint: str, params: Dict = None) -> Dict:
         response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
         return response.json()
+    except requests.exceptions.ConnectionError as e:
+        st.error(f"🔌 Connection Error: Cannot connect to backend at {API_BASE_URL}")
+        st.info("💡 The backend service might be starting up. Please wait a moment and refresh.")
+        return {}
+    except requests.exceptions.Timeout as e:
+        st.error(f"⏱️ Timeout Error: Backend is taking too long to respond")
+        st.info("💡 The backend might be processing data. Please try again.")
+        return {}
     except requests.exceptions.RequestException as e:
-        st.error(f"API Error: {e}")
+        st.error(f"🌐 API Error: {e}")
+        st.info("💡 Please check if the backend service is running")
         return {}
 
 def get_rankings_from_api(universe: str, limit: int = 50) -> pd.DataFrame:
@@ -85,6 +94,14 @@ def get_stock_data_from_api(ticker: str) -> Dict:
 def get_analysis_from_api(ticker: str) -> Dict:
     """Get AI analysis from API"""
     return api_request(f"/analysis/{ticker}")
+
+def test_backend_connection() -> bool:
+    """Test if backend is accessible"""
+    try:
+        response = requests.get(f"{API_BASE_URL}/health", timeout=5)
+        return response.status_code == 200
+    except:
+        return False
 
 # Import remaining modules
 from core.universe import get_universe
@@ -469,6 +486,14 @@ with st.sidebar:
         st.markdown("<div class='crt'></div>", unsafe_allow_html=True)
     
     st.markdown("---")
+    
+    # Backend Connection Status
+    backend_connected = test_backend_connection()
+    if backend_connected:
+        st.success("🔗 Backend Connected")
+    else:
+        st.error("🔌 Backend Disconnected")
+        st.info("💡 Backend service might be starting up")
     
     # AI Status
     if ai_enabled:
