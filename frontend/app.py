@@ -417,6 +417,42 @@ html, body, [data-testid="stAppViewContainer"]{
   display: none !important;
 }
 
+/* Remove any dim overlays on form submission or button clicks */
+.stApp > div[data-testid="stDecoration"] {
+  display: none !important;
+}
+
+/* Remove form submission overlays */
+.stFormSubmitButton {
+  background: transparent !important;
+}
+
+/* Remove any loading overlays */
+.stApp > div[data-testid="stDecoration"] {
+  display: none !important;
+}
+
+/* Ensure no dark overlays appear */
+.stApp > div[data-testid="stDecoration"] {
+  display: none !important;
+}
+
+/* Remove button click overlays */
+.stButton > button:active,
+.stButton > button:focus {
+  background: transparent !important;
+}
+
+/* Remove any form overlays */
+.stForm {
+  background: transparent !important;
+}
+
+/* Remove any loading states */
+.stApp > div[data-testid="stDecoration"] {
+  display: none !important;
+}
+
 /* Custom loading text */
 .stSpinner > div > div > div::after {
   content: "Loading..." !important;
@@ -548,8 +584,7 @@ if 'chart_search' not in st.session_state:
 if 'analysis_search' not in st.session_state:
     st.session_state.analysis_search = ""
 
-# Data Loading from API
-st.markdown('<div style="text-align: center; color: var(--accent); font-family: JetBrains Mono; font-weight: 600; margin: 20px 0;">Loading data from database...</div>', unsafe_allow_html=True)
+
 df = get_rankings_from_api("world_top_stocks", 10)
 
 if df is not None and not df.empty:
@@ -760,8 +795,7 @@ if df is not None and not df.empty:
             
             # Validate stock symbol
             if chart_stock:
-                # Fetch data directly from yfinance
-                st.markdown(f'<div style="text-align: center; color: var(--accent); font-family: JetBrains Mono; font-weight: 600; margin: 10px 0;">Fetching data for {chart_stock}...</div>', unsafe_allow_html=True)
+
 
                 try:
                     import yfinance as yf
@@ -1013,34 +1047,52 @@ if df is not None and not df.empty:
             st.session_state.analysis_search = search_ticker.upper().strip()
             search_ticker = st.session_state.analysis_search
             
-            # Get stock data from API
-            st.markdown(f'<div style="text-align: center; color: var(--accent); font-family: JetBrains Mono; font-weight: 600; margin: 10px 0;">Analyzing {search_ticker}...</div>', unsafe_allow_html=True)
-            stock_data = get_stock_data_from_api(search_ticker)
-            
-            # Get AI analysis
-            ai_analysis = None
-            if stock_data:
-                ai_response = api_request(f"/stock/{search_ticker}/analysis")
-                if ai_response and 'ai_analysis' in ai_response:
-                    ai_analysis = ai_response['ai_analysis']
+            try:
+                # Fetch live data directly from yfinance
+                import yfinance as yf
+                ticker = yf.Ticker(search_ticker)
                 
-            if stock_data:
-                # Display analysis in organized layout
-                left, right = st.columns(2, gap="large")
+                # Get current info and historical data
+                info = ticker.info
+                hist = ticker.history(period="3mo", auto_adjust=True)
                 
-                with left:
-                    st.markdown('<div class="analysis-section">', unsafe_allow_html=True)
-                    st.markdown('<div class="section-title">OVERVIEW</div>', unsafe_allow_html=True)
+                if hist.empty or len(hist) < 20:
+                    st.error(f"Could not fetch data for {search_ticker}. Please check the stock symbol.")
+                else:
+                    # Calculate metrics
+                    current_price = hist['Close'].iloc[-1]
+                    month_ago_price = hist['Close'].iloc[-21] if len(hist) >= 21 else hist['Close'].iloc[0]
+                    three_month_ago_price = hist['Close'].iloc[0]
                     
-                    score = stock_data.get('score', 0)
-                    # These are actual stock price growth percentages from backend
-                    growth_1m = stock_data.get('momentum_1m', 0)  # 1-month price growth %
-                    growth_3m = stock_data.get('momentum_3m', 0)  # 3-month price growth %
-                    price = stock_data.get('price', 0)
+                    # Calculate percentage changes
+                    change_1m = ((current_price / month_ago_price) - 1) * 100
+                    change_3m = ((current_price / three_month_ago_price) - 1) * 100
                     
-                    # Convert score to 0-100 scale and determine sentiment
-                    score_100 = min(max(score * 10, 0), 100)  # Scale to 0-100, cap at 100
+                    # Get daily change
+                    previous_close = info.get('regularMarketPreviousClose', current_price)
+                    daily_change = current_price - previous_close
+                    daily_change_pct = (daily_change / previous_close) * 100 if previous_close else 0
                     
+                    # Get company name
+                    company_name = info.get('longName', info.get('shortName', search_ticker))
+                    
+                    # Calculate a simple score based on performance
+                    # This is a simplified version of your AI scoring
+                    volatility = hist['Close'].pct_change().std() * 100
+                    volume_avg = hist['Volume'].mean()
+                    
+                    # Simple scoring algorithm
+                    score = (
+                        (change_1m * 0.4) +  # 40% weight on 1M performance
+                        (change_3m * 0.3) +  # 30% weight on 3M performance
+                        (1 / (volatility + 1) * 0.2) +  # 20% weight on low volatility
+                        (volume_avg / 1000000 * 0.1)  # 10% weight on volume
+                    )
+                    
+                    # Scale score to 0-100
+                    score_100 = min(max(score * 10, 0), 100)
+                    
+                    # Determine sentiment and recommendation
                     if score_100 > 80:
                         sentiment = "very bullish"
                         recommendation = "Strong Buy"
@@ -1057,47 +1109,77 @@ if df is not None and not df.empty:
                         sentiment = "very bearish"
                         recommendation = "Strong Sell"
                     
-                    st.markdown(f"""
-                    **{search_ticker}** ({stock_data.get('name', search_ticker)}) shows **{sentiment}** signals.
+                    # Display analysis in organized layout
+                    left, right = st.columns(2, gap="large")
                     
-                    **Key Metrics:**
-                    - **Current Price:** ${price:.2f}
-                    - **AI Score:** {score_100:.1f}/100
-                    - **1-Month Stock Growth:** {growth_1m:.1%}
-                    - **3-Month Stock Growth:** {growth_3m:.1%}
+                    with left:
+                        st.markdown('<div class="analysis-section">', unsafe_allow_html=True)
+                        st.markdown('<div class="section-title">OVERVIEW</div>', unsafe_allow_html=True)
+                        
+                        st.markdown(f"""
+                        **{search_ticker}** ({company_name}) shows **{sentiment}** signals.
+                        
+                        **Key Metrics:**
+                        - **Current Price:** ${current_price:.2f}
+                        - **Daily Change:** ${daily_change:+.2f} ({daily_change_pct:+.2f}%)
+                        - **AI Score:** {score_100:.1f}/100
+                        - **1-Month Growth:** {change_1m:+.1f}%
+                        - **3-Month Growth:** {change_3m:+.1f}%
+                        
+                        **Investment Recommendation:** {recommendation}
+                        """)
+                        st.markdown('</div>', unsafe_allow_html=True)
                     
-                    **Investment Recommendation:** {recommendation}
-                    """)
-                    st.markdown('</div>', unsafe_allow_html=True)
-                
-                with right:
-                    st.markdown('<div class="analysis-section">', unsafe_allow_html=True)
-                    st.markdown('<div class="section-title">PERFORMANCE</div>', unsafe_allow_html=True)
+                    with right:
+                        st.markdown('<div class="analysis-section">', unsafe_allow_html=True)
+                        st.markdown('<div class="section-title">PERFORMANCE</div>', unsafe_allow_html=True)
+                        
+                        # Risk assessment
+                        growth_risk = "Low" if change_1m > 5 else "Medium" if change_1m > -5 else "High"
+                        trend_risk = "Low" if change_3m > 10 else "Medium" if change_3m > -5 else "High"
+                        overall_risk = "Low" if score_100 > 60 else "Medium" if score_100 > 30 else "High"
+                        market_position = "Outperforming" if change_1m > 10 else "In-line" if change_1m > -5 else "Underperforming"
+                        
+                        st.markdown(f"""
+                        **Performance Breakdown:**
+                        
+                        The stock demonstrates {'strong' if score_100 > 60 else 'moderate' if score_100 > 30 else 'weak'} performance signals.
+                        
+                        **Risk Assessment:**
+                        - **Stock Growth Risk:** {growth_risk}
+                        - **Trend Risk:** {trend_risk}
+                        - **Overall Risk:** {overall_risk}
+                        
+                        **Market Position:** {market_position}
+                        
+                        **Technical Metrics:**
+                        - **Volatility:** {volatility:.1f}%
+                        - **Avg Volume:** {volume_avg:,.0f}
+                        """)
+                        st.markdown('</div>', unsafe_allow_html=True)
                     
-                    st.markdown(f"""
-                    **Performance Breakdown:**
-                    
-                    The stock demonstrates {'strong' if score > 1 else 'moderate' if score > 0.5 else 'weak'} performance signals.
-                    
-                    **Risk Assessment:**
-                    - **Stock Growth Risk:** {'Low' if growth_1m > 0.05 else 'Medium' if growth_1m > -0.05 else 'High'}
-                    - **Trend Risk:** {'Low' if growth_3m > 0.1 else 'Medium' if growth_3m > -0.05 else 'High'}
-                    - **Overall Risk:** {'Low' if score > 1 else 'Medium' if score > 0.5 else 'High'}
-                    
-                    **Market Position:** {'Outperforming' if growth_1m > 0.1 else 'In-line' if growth_1m > -0.05 else 'Underperforming'}
-                    """)
-                    st.markdown('</div>', unsafe_allow_html=True)
-                
-                # AI Analysis section
-                if ai_analysis and ai_analysis != "AI analysis disabled - no API key configured" and ai_analysis != "AI analysis quota exceeded for today":
-                    st.markdown(f'<div class="section-title">AI ANALYSIS</div>', unsafe_allow_html=True)
-                    st.markdown(f"""
-                    <div class="analysis-section">
-                        <div style="font-size: 14px; line-height: 1.6; color: var(--text);">
-                            {ai_analysis}
+                    # AI Analysis section (simplified)
+                    if os.getenv('GEMINI_API_KEY'):
+                        st.markdown(f'<div class="section-title">AI ANALYSIS</div>', unsafe_allow_html=True)
+                        st.markdown(f"""
+                        <div class="analysis-section">
+                            <div style="font-size: 14px; line-height: 1.6; color: var(--text);">
+                                AI analysis is available but requires backend integration. The current analysis uses live yfinance data with a simplified scoring algorithm based on 1-month growth (40%), 3-month growth (30%), volatility (20%), and volume (10%).
+                            </div>
                         </div>
-                    </div>
-                    """, unsafe_allow_html=True)
+                        """, unsafe_allow_html=True)
+                    else:
+                        st.markdown(f'<div class="section-title">AI ANALYSIS</div>', unsafe_allow_html=True)
+                        st.markdown(f"""
+                        <div class="analysis-section">
+                            <div style="font-size: 14px; line-height: 1.6; color: var(--text);">
+                                AI analysis is currently offline. This analysis uses live yfinance data with a simplified scoring algorithm based on 1-month growth (40%), 3-month growth (30%), volatility (20%), and volume (10%).
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+            except Exception as e:
+                st.error(f"Error analyzing {search_ticker}: {str(e)}")
                 
                 # Stock-specific news section
                 st.markdown(f'<div class="section-title">{search_ticker} NEWS</div>', unsafe_allow_html=True)
