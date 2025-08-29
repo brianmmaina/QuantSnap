@@ -12,12 +12,14 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from dotenv import load_dotenv
 
-# Import our database and models
+# Import our modules
 from database import Database
+from gemini import ai_analyzer
+from scraper import news_scraper, data_scraper
 from models import (
     RankingResponse, StockResponse, UniverseResponse, 
     PopulateResponse, HealthResponse, RootResponse,
-    StockData
+    AnalysisResponse, StockData
 )
 
 # Load environment variables
@@ -70,7 +72,7 @@ async def root():
     return RootResponse(
         name="QuantSnap API",
         version="1.0.0",
-        description="Quantitative stock analysis API",
+        description="Quantitative stock analysis API with AI",
         status="running"
     )
 
@@ -109,6 +111,85 @@ async def get_stock_data(ticker: str):
         return StockResponse(stock=data)
     except Exception as e:
         logger.error(f"Error getting stock data: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/stock/{ticker}/analysis", response_model=AnalysisResponse)
+async def analyze_stock(ticker: str):
+    """Get comprehensive stock analysis with AI and news"""
+    try:
+        # Get stock data
+        stock_data = db.get_stock_data(ticker)
+        if not stock_data:
+            raise HTTPException(status_code=404, detail=f"Stock {ticker} not found")
+        
+        # Get news
+        news_data = news_scraper.fetch_stock_news(ticker, limit=3)
+        
+        # Get AI analysis
+        ai_analysis = ai_analyzer.analyze_stock(stock_data, news_data)
+        
+        return AnalysisResponse(
+            ticker=ticker,
+            stock_data=stock_data,
+            news=news_data,
+            ai_analysis=ai_analysis,
+            timestamp=datetime.now().isoformat()
+        )
+    except Exception as e:
+        logger.error(f"Error analyzing stock {ticker}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/news/market")
+async def get_market_news():
+    """Get general market news"""
+    try:
+        news = news_scraper.fetch_market_news(limit=5)
+        return {
+            "news": news,
+            "count": len(news),
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error fetching market news: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/news/{ticker}")
+async def get_stock_news(ticker: str, limit: int = Query(5, description="Number of news items")):
+    """Get news for a specific stock"""
+    try:
+        news = news_scraper.fetch_stock_news(ticker, limit)
+        return {
+            "ticker": ticker,
+            "news": news,
+            "count": len(news),
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error fetching news for {ticker}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/sentiment/market")
+async def get_market_sentiment():
+    """Get market sentiment indicators"""
+    try:
+        sentiment = data_scraper.get_market_sentiment()
+        return sentiment
+    except Exception as e:
+        logger.error(f"Error getting market sentiment: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/sectors/performance")
+async def get_sector_performance():
+    """Get sector performance data"""
+    try:
+        sectors = data_scraper.scrape_sector_performance()
+        return {
+            "sectors": sectors,
+            "count": len(sectors),
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error getting sector performance: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/universes", response_model=UniverseResponse)
