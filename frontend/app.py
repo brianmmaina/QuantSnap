@@ -314,9 +314,10 @@ st.write("")
 def ticker_tape(df):
     items = []
     for t, r in df.head(10).iterrows():
-        mom = r['momentum_1m']
-        cls = "c-up" if mom>=0 else "c-down"
-        items.append(f"<span class='badge'>{t}</span> <span class='{cls}'>{mom:+.1%}</span>")
+        # Use daily change percentage for ticker tape (actual current change)
+        daily_change = r.get('daily_change_pct', r.get('momentum_1m', 0))
+        cls = "c-up" if daily_change>=0 else "c-down"
+        items.append(f"<span class='badge'>{t}</span> <span class='{cls}'>{daily_change:+.1%}</span>")
     html = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;".join(items)
     st.markdown(f"""
     <style>
@@ -381,10 +382,10 @@ if df is not None and not df.empty:
 
         c3.markdown(f"""
         <div class="card">
-          <div class="section-title">AVG 1M RETURN</div>
+          <div class="section-title">AVG DAILY CHANGE</div>
           <div style="font-size:28px;font-weight:800"
-               class="{ 'c-up' if df['momentum_1m'].mean()>=0 else 'c-down' }">
-            {df['momentum_1m'].mean():.1%}
+               class="{ 'c-up' if df.get('daily_change_pct', df['momentum_1m']).mean()>=0 else 'c-down' }">
+            {df.get('daily_change_pct', df['momentum_1m']).mean():.1%}
           </div>
         </div>""", unsafe_allow_html=True)
 

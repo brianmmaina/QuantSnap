@@ -81,9 +81,15 @@ class Database:
             else:
                 sharpe_ratio = 0
             
-            # Price changes
+            # Price changes - get actual daily change
             price_change_1d = hist['Close'].pct_change().iloc[-1] * 100
             price_change_5d = hist['Close'].pct_change(5).iloc[-1] * 100 if len(hist) >= 5 else 0
+            
+            # Get current vs previous close for actual daily change
+            current_price = hist['Close'].iloc[-1]
+            previous_close = hist['Close'].iloc[-2] if len(hist) > 1 else current_price
+            daily_change = current_price - previous_close
+            daily_change_pct = (daily_change / previous_close) * 100 if previous_close > 0 else 0
             
             # Company info
             company_name = info.get('longName', info.get('shortName', ticker))
@@ -112,6 +118,8 @@ class Database:
                 'sharpe_ratio': round(sharpe_ratio, 2),
                 'price_change_1d': round(price_change_1d, 2),
                 'price_change_5d': round(price_change_5d, 2),
+                'daily_change': round(daily_change, 2),
+                'daily_change_pct': round(daily_change_pct, 2),
                 'market_cap': market_cap,
                 'score': round(score, 3),
                 'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
