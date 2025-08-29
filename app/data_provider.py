@@ -30,7 +30,7 @@ class AlphaVantageProvider:
             
         try:
             # Rate limiting - Alpha Vantage free tier: 5 requests per minute
-            time.sleep(12)  # Wait 12 seconds between requests
+            time.sleep(1)  # Wait 1 second between requests (more reasonable)
             
             # Get daily time series
             params = {
@@ -43,8 +43,11 @@ class AlphaVantageProvider:
             response = requests.get(self.base_url, params=params)
             data = response.json()
             
-            if 'Error Message' in data or 'Note' in data:
-                logger.error(f"Alpha Vantage error for {ticker}: {data}")
+            if 'Error Message' in data:
+                logger.error(f"Alpha Vantage error for {ticker}: {data['Error Message']}")
+                return None
+            elif 'Note' in data:
+                logger.warning(f"Alpha Vantage note for {ticker}: {data['Note']}")
                 return None
             
             # Get company overview
@@ -58,7 +61,10 @@ class AlphaVantageProvider:
             overview_data = overview_response.json()
             
             if 'Error Message' in overview_data:
-                logger.error(f"Alpha Vantage overview error for {ticker}: {overview_data}")
+                logger.error(f"Alpha Vantage overview error for {ticker}: {overview_data['Error Message']}")
+                return None
+            elif 'Note' in overview_data:
+                logger.warning(f"Alpha Vantage overview note for {ticker}: {overview_data['Note']}")
                 return None
             
             # Process time series data
@@ -127,7 +133,7 @@ class AlphaVantageProvider:
                 (market_cap / 1e12 * 0.1)  # Market cap factor
             )
             
-            return {
+            result = {
                 'ticker': ticker,
                 'name': company_name,
                 'sector': sector,
@@ -145,6 +151,9 @@ class AlphaVantageProvider:
                 'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             }
             
+            logger.info(f"✅ Successfully fetched {ticker} from Alpha Vantage: ${current_price}")
+            return result
+            
         except Exception as e:
             logger.error(f"Error getting Alpha Vantage data for {ticker}: {e}")
             return None
@@ -158,7 +167,7 @@ class AlphaVantageProvider:
         
         for ticker in tickers:
             try:
-                time.sleep(12)  # Rate limiting
+                time.sleep(1)  # Rate limiting (1 second between requests)
                 
                 params = {
                     'function': 'GLOBAL_QUOTE',
@@ -169,7 +178,11 @@ class AlphaVantageProvider:
                 response = requests.get(self.base_url, params=params)
                 data = response.json()
                 
-                if 'Error Message' in data or 'Note' in data:
+                if 'Error Message' in data:
+                    logger.error(f"Alpha Vantage live price error for {ticker}: {data['Error Message']}")
+                    continue
+                elif 'Note' in data:
+                    logger.warning(f"Alpha Vantage live price note for {ticker}: {data['Note']}")
                     continue
                 
                 quote = data.get('Global Quote', {})
