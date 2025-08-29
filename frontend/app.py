@@ -928,7 +928,6 @@ if df is not None and not df.empty:
                 """, unsafe_allow_html=True)
         else:
             st.markdown('<div class="alert alert-warning">Please enter a stock symbol to view chart</div>', unsafe_allow_html=True)
-        
         neon_divider("LIVE STOCK PRICES")
         
         try:
