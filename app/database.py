@@ -355,7 +355,7 @@ class Database:
                     'price': trad_factors.get('current_price', 0),
                     'traditional_score': trad_factors.get('sharpe_ratio', 0),
                     'reputation_score': rep_factors.get('financial_health_score', 0),
-                    'composite_score': round(composite_score, 3),
+                    'score': round(composite_score, 3),
                     'momentum_1m': trad_factors.get('momentum_1m', 0),
                     'momentum_3m': trad_factors.get('momentum_3m', 0),
                     'sharpe_ratio': trad_factors.get('sharpe_ratio', 0),
@@ -377,9 +377,9 @@ class Database:
             logger.info(f"Saved {len(reputation_data)} reputation factors")
         
         if rankings_data:
-            # Sort by composite score
+            # Sort by score
             rankings_df = pd.DataFrame(rankings_data)
-            rankings_df = rankings_df.sort_values('composite_score', ascending=False).reset_index(drop=True)
+            rankings_df = rankings_df.sort_values('score', ascending=False).reset_index(drop=True)
             rankings_df['rank'] = range(1, len(rankings_df) + 1)
             rankings_df.to_csv(self.rankings_file, index=False)
             logger.info(f"Saved {len(rankings_data)} rankings")
