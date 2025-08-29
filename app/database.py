@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 import logging
+import time
 from typing import List, Dict, Optional
 from pathlib import Path
 
@@ -18,31 +19,29 @@ class Database:
         self.data_dir = Path("data")
         self.data_dir.mkdir(exist_ok=True)
         
-        # Stock universe
+        # Focused stock universe - top stocks only
         self.stocks = [
             "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "META", "NVDA", "NFLX", "ADBE", "CRM",
             "ORCL", "INTC", "AMD", "QCOM", "TXN", "AVGO", "MU", "AMAT", "KLAC", "LRCX",
             "ASML", "TSM", "SMCI", "PLTR", "SNOW", "DDOG", "CRWD", "ZS", "OKTA", "NET",
-            "SQ", "PYPL", "COIN", "HOOD", "DASH", "UBER", "LYFT", "ZM", "TEAM", "SLACK",
-            "SHOP", "WMT", "TGT", "COST", "HD", "LOW", "NKE", "SBUX", "MCD", "DIS",
-            "CMCSA", "NFLX", "SPOT", "PINS", "SNAP", "TWTR", "RBLX", "EA", "ATVI", "TTWO",
-            "JPM", "BAC", "WFC", "GS", "MS", "C", "JPM", "AXP", "V", "MA", "PYPL",
-            "UNH", "JNJ", "PFE", "ABBV", "MRK", "TMO", "ABT", "DHR", "BMY", "AMGN",
-            "XOM", "CVX", "COP", "EOG", "SLB", "HAL", "BKR", "PSX", "VLO", "MPC",
-            "KO", "PEP", "PG", "ULTA", "NKE", "LULU", "UA", "DECK", "SKX", "FL",
-            "JBLU", "DAL", "UAL", "AAL", "LUV", "SAVE", "ALK", "HA", "SKYW", "ALGT",
-            "BA", "RTX", "LMT", "GD", "NOC", "LHX", "TDG", "AJRD", "KTOS", "TXT",
-            "CAT", "DE", "CNH", "AGCO", "KUBTY", "TTC", "LNN", "ALG", "WNC", "OSK",
-            "JCI", "EMR", "ETN", "ROK", "DOV", "XYL", "AME", "FTV", "ITT", "FLS",
-            "PH", "DHR", "DOV", "XYL", "AME", "FTV", "ITT", "FLS", "PH", "DHR",
-            "SPY", "QQQ", "IWM", "VTI", "VOO", "VEA", "VWO", "BND", "TLT", "GLD",
-            "SLV", "USO", "UNG", "DBA", "DBC", "GLD", "SLV", "USO", "UNG", "DBA",
-            "ARKK", "ARKW", "ARKG", "ARKF", "ARKQ", "ARKX", "ARKA", "ARKB", "ARKC", "ARKD"
+            "SQ", "PYPL", "COIN", "HOOD", "DASH", "UBER", "LYFT", "ZM", "TEAM", "SHOP",
+            "WMT", "TGT", "COST", "HD", "LOW", "NKE", "SBUX", "MCD", "DIS", "CMCSA",
+            "SPOT", "PINS", "SNAP", "RBLX", "EA", "ATVI", "TTWO", "JPM", "BAC", "WFC",
+            "GS", "MS", "C", "AXP", "V", "MA", "UNH", "JNJ", "PFE", "ABBV", "MRK",
+            "TMO", "ABT", "DHR", "BMY", "AMGN", "XOM", "CVX", "COP", "EOG", "SLB",
+            "KO", "PEP", "PG", "ULTA", "LULU", "UA", "DECK", "SKX", "FL", "JBLU",
+            "DAL", "UAL", "AAL", "LUV", "SAVE", "ALK", "HA", "SKYW", "ALGT", "BA",
+            "RTX", "LMT", "GD", "NOC", "LHX", "TDG", "AJRD", "KTOS", "TXT", "CAT",
+            "DE", "CNH", "AGCO", "TTC", "LNN", "ALG", "WNC", "OSK", "JCI", "EMR",
+            "ETN", "ROK", "DOV", "XYL", "AME", "FTV", "ITT", "FLS", "PH", "DHR"
         ]
     
     def get_stock_data(self, ticker: str) -> Optional[Dict]:
-        """Get comprehensive stock data directly from yfinance"""
+        """Get comprehensive stock data directly from yfinance with rate limiting"""
         try:
+            # Add delay to prevent rate limiting
+            time.sleep(0.1)  # 100ms delay between requests
+            
             stock = yf.Ticker(ticker)
             hist = stock.history(period="1y")
             info = stock.info
@@ -122,18 +121,27 @@ class Database:
             }
             
         except Exception as e:
-            logger.error(f"Error getting stock data for {ticker}: {e}")
+            if "Too Many Requests" in str(e):
+                logger.warning(f"Rate limited for {ticker}, skipping...")
+            else:
+                logger.error(f"Error getting stock data for {ticker}: {e}")
             return None
     
     def get_rankings(self, universe_name: str = "world_top_stocks", limit: int = 10) -> List[Dict]:
-        """Get current rankings by fetching fresh data"""
+        """Get current rankings by fetching fresh data with rate limiting"""
         try:
             rankings = []
+            successful_fetches = 0
             
             for ticker in self.stocks:
                 data = self.get_stock_data(ticker)
                 if data and data['score'] > 0:  # Only include stocks with valid data
                     rankings.append(data)
+                    successful_fetches += 1
+                    
+                    # Stop after getting enough stocks to avoid rate limits
+                    if successful_fetches >= limit * 2:  # Get 2x the limit to have options
+                        break
             
             # Sort by score (highest first) and add rank
             rankings.sort(key=lambda x: x['score'], reverse=True)
@@ -141,6 +149,7 @@ class Database:
             for i, ranking in enumerate(rankings[:limit]):
                 ranking['rank'] = i + 1
             
+            logger.info(f"Successfully fetched {len(rankings[:limit])} stock rankings")
             return rankings[:limit]
             
         except Exception as e:
