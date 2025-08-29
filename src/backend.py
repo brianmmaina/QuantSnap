@@ -269,6 +269,64 @@ async def refresh_universe_data(universe: str):
         logger.error(f"Failed to refresh universe {universe}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Populate database endpoint
+@app.post("/populate")
+async def populate_database():
+    """Populate database with initial stock data"""
+    try:
+        from infrastructure.data_pipeline import DataPipeline
+        
+        pipeline = DataPipeline()
+        
+        # Process popular stocks first (smaller dataset)
+        logger.info("Processing popular stocks...")
+        pipeline.process_universe('popular_stocks')
+        
+        logger.info("Processing S&P 500...")
+        pipeline.process_universe('sp500')
+        
+        logger.info("Processing top ETFs...")
+        pipeline.process_universe('top_etfs')
+        
+        logger.info("Processing world top stocks...")
+        pipeline.process_universe('world_top_stocks')
+        
+        return {
+            "status": "success",
+            "message": "Database populated successfully",
+            "universes_processed": ["popular_stocks", "sp500", "top_etfs", "world_top_stocks"],
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to populate database: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Quick populate endpoint (accurate)
+@app.post("/populate/quick")
+async def quick_populate_database():
+    """Quick populate database with popular stocks using full factor calculations"""
+    try:
+        from infrastructure.data_pipeline import DataPipeline
+        
+        pipeline = DataPipeline()
+        
+        # Process popular stocks with full factor calculations
+        logger.info("Processing popular stocks with full accuracy...")
+        pipeline.process_universe('popular_stocks')
+        
+        return {
+            "status": "success",
+            "message": "Popular stocks populated with full factor calculations",
+            "universe_processed": "popular_stocks",
+            "accuracy": "Full factor calculations including reputation metrics",
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to quick populate database: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
