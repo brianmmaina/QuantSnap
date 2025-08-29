@@ -47,6 +47,13 @@ class DatabaseManager:
                 cur.execute(query, params)
                 return cur.fetchall()
     
+    def execute_update(self, query: str, params: tuple = None) -> None:
+        """Execute INSERT/UPDATE/DELETE query without returning results"""
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, params)
+                conn.commit()
+    
     def execute_many(self, query: str, params_list: List[tuple]) -> None:
         """Execute multiple queries"""
         with get_connection() as conn:
@@ -94,7 +101,7 @@ class StockDatabase:
             enterprise_value = EXCLUDED.enterprise_value,
             updated_at = CURRENT_TIMESTAMP
         """
-        self.db.execute_query(query, (ticker, name, sector, industry, market_cap, enterprise_value))
+        self.db.execute_update(query, (ticker, name, sector, industry, market_cap, enterprise_value))
     
     def insert_daily_prices(self, df: pd.DataFrame) -> None:
         """Insert daily price data"""
