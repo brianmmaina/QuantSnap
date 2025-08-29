@@ -263,6 +263,35 @@ html, body, [data-testid="stAppViewContainer"]{
 
 .stButton>button:hover{ border-color: var(--accent); }
 
+/* Streamlit Metrics Styling */
+[data-testid="metric-container"] {
+  background: var(--panel) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 12px !important;
+  padding: 16px !important;
+}
+
+[data-testid="metric-container"] label {
+  color: var(--muted) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+[data-testid="metric-container"] [data-testid="metric-value"] {
+  color: var(--text) !important;
+  font-size: 24px !important;
+  font-weight: 800 !important;
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
+[data-testid="metric-container"] [data-testid="metric-delta"] {
+  color: var(--text) !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+}
+
 #MainMenu, header, footer{ visibility: hidden; }
 
 .card:hover, .stock-card:hover {
@@ -313,10 +342,10 @@ st.write("")
 # Methodology Section
 st.markdown("""
 <div class="card" style="margin-bottom: 20px;">
-  <div class="section-title">📊 RANKING METHODOLOGY</div>
+  <div class="section-title">RANKING METHODOLOGY</div>
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 16px;">
     <div>
-      <div style="font-weight: 700; color: var(--accent); margin-bottom: 8px;">🎯 SCORING ALGORITHM</div>
+      <div style="font-weight: 700; color: var(--accent); margin-bottom: 8px;">SCORING ALGORITHM</div>
       <div style="font-size: 14px; line-height: 1.5; color: var(--text);">
         <strong>Composite Score =</strong><br>
         • 1M Stock Price Growth (30% weight)<br>
@@ -328,7 +357,7 @@ st.markdown("""
       </div>
     </div>
     <div>
-      <div style="font-weight: 700; color: var(--accent); margin-bottom: 8px;">📈 DATA SOURCES</div>
+      <div style="font-weight: 700; color: var(--accent); margin-bottom: 8px;">DATA SOURCES</div>
       <div style="font-size: 14px; line-height: 1.5; color: var(--text);">
         • <strong>Yahoo Finance:</strong> Real-time prices & fundamentals<br>
         • <strong>500+ Stocks:</strong> Comprehensive market coverage<br>
@@ -348,7 +377,7 @@ def ticker_tape(df):
     items = []
     for t, r in df.head(10).iterrows():
         # Use 1-month stock price growth for ticker tape (more stable)
-        growth_1m = r.get('momentum_1m', 0)
+        growth_1m = r.get('growth_1m', 0)
         cls = "c-up" if growth_1m>=0 else "c-down"
         items.append(f"<span class='badge'>{t}</span> <span class='{cls}'>{growth_1m:+.1f}%</span>")
     html = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;".join(items)
@@ -417,15 +446,15 @@ if df is not None and not df.empty:
         <div class="card">
           <div class="section-title">AVG 1M STOCK GROWTH</div>
           <div style="font-size:28px;font-weight:800"
-               class="{ 'c-up' if df['momentum_1m'].mean()>=0 else 'c-down' }">
-            {df['momentum_1m'].mean():.1f}%
+               class="{ 'c-up' if df['growth_1m'].mean()>=0 else 'c-down' }">
+            {df['growth_1m'].mean():.1f}%
           </div>
         </div>""", unsafe_allow_html=True)
 
         c4.markdown(f"""
         <div class="card">
           <div class="section-title">AVG 3M STOCK GROWTH</div>
-          <div style="font-size:28px;font-weight:800" class="c-info">{df['momentum_3m'].mean():.1f}%</div>
+          <div style="font-size:28px;font-weight:800" class="c-info">{df['growth_3m'].mean():.1f}%</div>
         </div>""", unsafe_allow_html=True)
         
         neon_divider("TOP PERFORMERS")
@@ -433,7 +462,7 @@ if df is not None and not df.empty:
 
         for i, (ticker, row) in enumerate(df.head(10).iterrows(), 1):
             score = row['score']
-            growth_1m = row['momentum_1m']
+            growth_1m = row['growth_1m']
             sharpe = row.get('sharpe_ratio', 0)
             company_name = row.get('name', ticker)
             logo_url = row.get('logo_url', '')
@@ -728,8 +757,8 @@ if df is not None and not df.empty:
                     st.markdown('<div class="section-title">OVERVIEW</div>', unsafe_allow_html=True)
                     
                     score = stock_data.get('score', 0)
-                    growth_1m = stock_data.get('momentum_1m', 0)
-                    growth_3m = stock_data.get('momentum_3m', 0)
+                    growth_1m = stock_data.get('growth_1m', 0)
+                    growth_3m = stock_data.get('growth_3m', 0)
                     price = stock_data.get('price', 0)
                     
                     # Determine sentiment
