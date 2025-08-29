@@ -11,7 +11,7 @@ import logging
 import time
 from typing import List, Dict, Optional
 from pathlib import Path
-from .data_provider import AlphaVantageProvider
+from data_provider import AlphaVantageProvider
 
 logger = logging.getLogger(__name__)
 
