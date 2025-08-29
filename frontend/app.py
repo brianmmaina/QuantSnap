@@ -597,53 +597,145 @@ if df is not None and not df.empty:
         </div>""", unsafe_allow_html=True)
         
         neon_divider("TOP PERFORMERS")
-        cols = st.columns(2)
-
-        for i, (ticker, row) in enumerate(df.head(10).iterrows(), 1):
-            score = row['score']
-            # This is actual stock price growth percentage (not momentum)
-            growth_1m = row['momentum_1m']
-            sharpe = row.get('sharpe_ratio', 0)
-            company_name = row.get('name', ticker)
-            logo_url = row.get('logo_url', '')
+        
+        # Get live data for top 10 stocks from AI rankings
+        top_stocks = df.head(10).index.tolist()
+        
+        try:
+            # Fetch live data for top performers
+            import yfinance as yf
+            live_data = {}
             
-            score_class = "c-up" if score>10 else "c-warn" if score>5 else "c-muted" if score>0 else "c-down"
+            for ticker in top_stocks:
+                try:
+                    stock = yf.Ticker(ticker)
+                    info = stock.info
+                    hist = stock.history(period="3mo", auto_adjust=True)
+                    
+                    if not hist.empty and len(hist) > 20:
+                        current_price = hist['Close'].iloc[-1]
+                        month_ago_price = hist['Close'].iloc[-21] if len(hist) >= 21 else hist['Close'].iloc[0]
+                        three_month_ago_price = hist['Close'].iloc[0]
+                        
+                        # Calculate percentage changes
+                        change_1m = ((current_price / month_ago_price) - 1) * 100
+                        change_3m = ((current_price / three_month_ago_price) - 1) * 100
+                        
+                        # Get daily change
+                        previous_close = info.get('regularMarketPreviousClose', current_price)
+                        daily_change = current_price - previous_close
+                        daily_change_pct = (daily_change / previous_close) * 100 if previous_close else 0
+                        
+                        live_data[ticker] = {
+                            'price': current_price,
+                            'change_1m': change_1m,
+                            'change_3m': change_3m,
+                            'daily_change': daily_change,
+                            'daily_change_pct': daily_change_pct,
+                            'company_name': info.get('longName', info.get('shortName', ticker))
+                        }
+                except Exception as e:
+                    # Fallback to original data if yfinance fails
+                    row = df.loc[ticker]
+                    live_data[ticker] = {
+                        'price': row['price'],
+                        'change_1m': row['momentum_1m'],
+                        'change_3m': row['momentum_3m'],
+                        'daily_change': 0,
+                        'daily_change_pct': 0,
+                        'company_name': row.get('name', ticker)
+                    }
             
-            # Left column: ranks 1-5, Right column: ranks 6-10
-            with cols[0] if i <= 5 else cols[1]:
-                st.markdown(f"""
-                <a href="https://finance.yahoo.com/quote/{ticker}" target="_blank" style="text-decoration: none; color: inherit;">
-                    <div class="stock-card" style="cursor: pointer; transition: background-color 0.2s; margin-bottom: 16px;">
-                      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-                        <div class="badge" style="font-size: 14px; font-weight: 800;">#{i}</div>
-                        <div style="font-weight: 700; font-size: 16px; color: var(--accent);">{ticker}</div>
-                      </div>
-                      <div style="font-weight: 600; font-size: 14px; color: var(--text); margin-bottom: 8px; line-height: 1.3;">
-                        {company_name}
-                      </div>
-                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-                        <div>
-                          <div style="font-size: 12px; color: var(--muted);">Rating</div>
-                          <div style="font-weight: 700; font-size: 16px;" class="{score_class}">{score:.1f}</div>
+            # Display top performers with live data
+            cols = st.columns(2)
+            
+            for i, ticker in enumerate(top_stocks, 1):
+                if ticker in live_data:
+                    data = live_data[ticker]
+                    score = df.loc[ticker, 'score']
+                    
+                    score_class = "c-up" if score > 10 else "c-warn" if score > 5 else "c-muted" if score > 0 else "c-down"
+                    
+                    # Left column: ranks 1-5, Right column: ranks 6-10
+                    with cols[0] if i <= 5 else cols[1]:
+                        st.markdown(f"""
+                        <a href="https://finance.yahoo.com/quote/{ticker}" target="_blank" style="text-decoration: none; color: inherit;">
+                            <div class="stock-card" style="cursor: pointer; transition: background-color 0.2s; margin-bottom: 16px;">
+                              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                                <div class="badge" style="font-size: 14px; font-weight: 800;">#{i}</div>
+                                <div style="font-weight: 700; font-size: 16px; color: var(--accent);">{ticker}</div>
+                              </div>
+                              <div style="font-weight: 600; font-size: 14px; color: var(--text); margin-bottom: 8px; line-height: 1.3;">
+                                {data['company_name']}
+                              </div>
+                              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                                <div>
+                                  <div style="font-size: 12px; color: var(--muted);">Rating</div>
+                                  <div style="font-weight: 700; font-size: 16px;" class="{score_class}">{score:.1f}</div>
+                                </div>
+                                <div>
+                                  <div style="font-size: 12px; color: var(--muted);">1M Growth</div>
+                                  <div style="font-weight: 700; font-size: 16px;" class="{'c-up' if data['change_1m']>=0 else 'c-down'}">{data['change_1m']:+.1f}%</div>
+                                </div>
+                              </div>
+                              <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                  <div style="font-size: 12px; color: var(--muted);">3M Growth</div>
+                                  <div style="font-weight: 600; font-size: 14px;" class="{'c-up' if data['change_3m']>=0 else 'c-down'}">{data['change_3m']:+.1f}%</div>
+                                </div>
+                                <div style="text-align: right;">
+                                  <div style="font-size: 12px; color: var(--muted);">Price</div>
+                                  <div style="font-weight: 700; font-size: 16px;">${data['price']:.2f}</div>
+                                </div>
+                              </div>
+                            </div>
+                        </a>
+                        """, unsafe_allow_html=True)
+                        
+        except Exception as e:
+            # Fallback to original display if live data fails
+            cols = st.columns(2)
+            for i, (ticker, row) in enumerate(df.head(10).iterrows(), 1):
+                score = row['score']
+                growth_1m = row['momentum_1m']
+                company_name = row.get('name', ticker)
+                
+                score_class = "c-up" if score>10 else "c-warn" if score>5 else "c-muted" if score>0 else "c-down"
+                
+                with cols[0] if i <= 5 else cols[1]:
+                    st.markdown(f"""
+                    <a href="https://finance.yahoo.com/quote/{ticker}" target="_blank" style="text-decoration: none; color: inherit;">
+                        <div class="stock-card" style="cursor: pointer; transition: background-color 0.2s; margin-bottom: 16px;">
+                          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                            <div class="badge" style="font-size: 14px; font-weight: 800;">#{i}</div>
+                            <div style="font-weight: 700; font-size: 16px; color: var(--accent);">{ticker}</div>
+                          </div>
+                          <div style="font-weight: 600; font-size: 14px; color: var(--text); margin-bottom: 8px; line-height: 1.3;">
+                            {company_name}
+                          </div>
+                          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                            <div>
+                              <div style="font-size: 12px; color: var(--muted);">Rating</div>
+                              <div style="font-weight: 700; font-size: 16px;" class="{score_class}">{score:.1f}</div>
+                            </div>
+                            <div>
+                              <div style="font-size: 12px; color: var(--muted);">1M Growth</div>
+                              <div style="font-weight: 700; font-size: 16px;" class="{'c-up' if growth_1m>=0 else 'c-down'}">{growth_1m:+.1f}%</div>
+                            </div>
+                          </div>
+                          <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                              <div style="font-size: 12px; color: var(--muted);">3M Growth</div>
+                              <div style="font-weight: 600; font-size: 14px;" class="{'c-up' if row['momentum_3m']>=0 else 'c-down'}">{row['momentum_3m']:+.1f}%</div>
+                            </div>
+                            <div style="text-align: right;">
+                              <div style="font-size: 12px; color: var(--muted);">Price</div>
+                              <div style="font-weight: 700; font-size: 16px;">${row['price']:.2f}</div>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <div style="font-size: 12px; color: var(--muted);">1M Stock Growth</div>
-                          <div style="font-weight: 700; font-size: 16px;" class="{'c-up' if growth_1m>=0 else 'c-down'}">{growth_1m:+.1f}%</div>
-                        </div>
-                      </div>
-                      <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                          <div style="font-size: 12px; color: var(--muted);">Sharpe</div>
-                          <div style="font-weight: 600; font-size: 14px;" class="c-info">{sharpe:.2f}</div>
-                        </div>
-                        <div style="text-align: right;">
-                          <div style="font-size: 12px; color: var(--muted);">Price</div>
-                          <div style="font-weight: 700; font-size: 16px;">${row['price']:.2f}</div>
-                        </div>
-                      </div>
-                    </div>
-                </a>
-                """, unsafe_allow_html=True)
+                    </a>
+                    """, unsafe_allow_html=True)
         
         neon_divider("MARKET CHARTS")
         
@@ -668,23 +760,31 @@ if df is not None and not df.empty:
             
             # Validate stock symbol
             if chart_stock:
-                # Fetch data from backend API
+                # Fetch data directly from yfinance
                 st.markdown(f'<div style="text-align: center; color: var(--accent); font-family: JetBrains Mono; font-weight: 600; margin: 10px 0;">Fetching data for {chart_stock}...</div>', unsafe_allow_html=True)
 
                 try:
-                        chart_response = api_request(f"/chart/{chart_stock}?period=1y")
-                        if chart_response and 'data' in chart_response:
-                            # Convert chart data to pandas series for compatibility
-                            chart_data = chart_response['data']
-                            dates = pd.to_datetime([item['date'] for item in chart_data])
-                            prices = [item['close'] for item in chart_data]
-                            price_series = pd.Series(prices, index=dates)
-                        else:
-                            st.error(f"Could not fetch data for {chart_stock}. Please check the stock symbol.")
-                            price_series = None
+                    import yfinance as yf
+                    ticker = yf.Ticker(chart_stock)
+                    
+                    # Get historical data
+                    hist = ticker.history(period="2y", auto_adjust=True)
+                    
+                    if hist.empty or len(hist) < 30:
+                        st.error(f"Could not fetch data for {chart_stock}. Please check the stock symbol.")
+                        price_series = None
+                    else:
+                        # Use Close prices
+                        price_series = hist['Close']
+                        
+                        # Get company name
+                        info = ticker.info
+                        company_name = info.get('longName', info.get('shortName', ""))
+                        
                 except Exception as e:
                     st.error(f"Could not fetch data for {chart_stock}. Please check the stock symbol.")
                     price_series = None
+                    company_name = ""
                 
                 if price_series is not None and len(price_series) > 30:
                     # Time period selection
@@ -735,19 +835,7 @@ if df is not None and not df.empty:
                         fillcolor='rgba(0, 255, 136, 0.1)'  # Very light green fill
                     ))
                     
-                    # Get company name if available
-                    company_name = ""
-                    try:
-                        if len(df) > 0 and chart_stock in df.index:
-                            company_name = df.loc[chart_stock, 'name'] if 'name' in df.columns else ""
-                        else:
-                            # Try to get company name from yfinance
-                            import yfinance as yf
-                            ticker_obj = yf.Ticker(chart_stock)
-                            info = ticker_obj.info
-                            company_name = info.get('longName', info.get('shortName', ""))
-                    except:
-                        company_name = ""
+
                     
                     # Create title with company name if available
                     title_text = f"{chart_stock} Price Chart - {period_name}"
