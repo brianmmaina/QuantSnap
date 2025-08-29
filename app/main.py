@@ -161,16 +161,25 @@ class DataStore:
             except:
                 sharpe_ratio = 0
             
+            # Helper function to safely handle NaN values
+            def safe_round(value, decimals=2):
+                try:
+                    if pd.isna(value) or value is None:
+                        return 0.0
+                    return round(float(value), decimals)
+                except:
+                    return 0.0
+            
             factors = {
                 'ticker': ticker,
-                'momentum_1m': 0.0 if pd.isna(momentum_1m) else round(momentum_1m, 2),
-                'momentum_3m': 0.0 if pd.isna(momentum_3m) else round(momentum_3m, 2),
-                'volatility_30d': 0.0 if pd.isna(volatility_30d) else round(volatility_30d, 2),
-                'volume_avg': 0.0 if pd.isna(volume_avg) else round(volume_avg, 0),
-                'price': 0.0 if pd.isna(price) else round(price, 2),
-                'price_change_1d': 0.0 if pd.isna(price_change_1d) else round(price_change_1d, 2),
-                'price_change_5d': 0.0 if pd.isna(price_change_5d) else round(price_change_5d, 2),
-                'sharpe_ratio': round(sharpe_ratio, 2),
+                'momentum_1m': safe_round(momentum_1m, 2),
+                'momentum_3m': safe_round(momentum_3m, 2),
+                'volatility_30d': safe_round(volatility_30d, 2),
+                'volume_avg': safe_round(volume_avg, 0),
+                'price': safe_round(price, 2),
+                'price_change_1d': safe_round(price_change_1d, 2),
+                'price_change_5d': safe_round(price_change_5d, 2),
+                'sharpe_ratio': safe_round(sharpe_ratio, 2),
                 'date': datetime.now().isoformat()
             }
             
