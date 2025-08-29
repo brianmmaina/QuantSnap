@@ -2,7 +2,7 @@
 
 A data-driven stock ranking application powered by quantitative factors and AI analysis. Built with Python, FastAPI, PostgreSQL, and Streamlit. Following the basketball scout pattern with clean data processing and API-first design.
 
-## 🚀 Features
+## Features
 
 ### **Core Functionality**
 - **Multi-Factor Quantitative Model**: Momentum (1M, 3M), Volatility (30d), Sharpe Ratio (3M), Dollar Volume (20d), Slope (50d)
@@ -36,7 +36,7 @@ A data-driven stock ranking application powered by quantitative factors and AI a
 - **Responsive Layout**: Works on desktop and mobile
 - **Clean Interface**: Minimalist design focused on data
 
-## 📊 How It Works
+## How It Works
 
 1. **Data Collection**: Fetches historical price data from Yahoo Finance
 2. **Factor Calculation**: Computes momentum, volatility, Sharpe ratio, and other metrics
@@ -45,7 +45,7 @@ A data-driven stock ranking application powered by quantitative factors and AI a
 5. **AI Analysis**: Uses Gemini AI for intelligent insights and recommendations
 6. **Ranking**: Displays top stocks with detailed analysis
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Python 3.11+**: Core application logic
 - **FastAPI**: RESTful API backend
@@ -59,7 +59,7 @@ A data-driven stock ranking application powered by quantitative factors and AI a
 - **SQLAlchemy**: Database ORM
 - **Redis**: Caching (optional)
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 ai-daily-draft/
@@ -85,7 +85,7 @@ ai-daily-draft/
 └── README.md           # Documentation
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### **Local Development**
 
@@ -147,7 +147,7 @@ ai-daily-draft/
    - Set environment variables in Render dashboard
    - Deploy!
 
-## 📈 Usage
+## Usage
 
 ### **Select Universe**
 - Choose from World Top Stocks, S&P 500, Top ETFs, or Popular Stocks
@@ -168,7 +168,7 @@ ai-daily-draft/
 - Risk assessment and investment recommendations
 - Market context and trends
 
-## 🔧 Configuration
+## Configuration
 
 ### **Environment Variables**
 ```bash
@@ -192,7 +192,7 @@ python3 cli.py list-universes
 python3 cli.py latest
 ```
 
-## 📊 Factor Model
+## Factor Model
 
 ### **Quantitative Factors**
 - **Momentum (1M)**: 1-month price return (22% weight)
@@ -209,7 +209,7 @@ python3 cli.py latest
 4. **Weighted Scoring**: Combine factors with optimized weights
 5. **Ranking**: Sort by composite score
 
-## 🎯 Investment Strategy
+## Investment Strategy
 
 ### **Score Interpretation**
 - **Strong Buy (>0.8)**: Excellent performance across all factors
@@ -223,34 +223,12 @@ python3 cli.py latest
 - **Volume Analysis**: Ensure sufficient liquidity
 - **AI Validation**: Use AI insights for confirmation
 
-## 🔒 Security & Privacy
+## Security & Privacy
 
 - **No Personal Data**: App doesn't collect or store personal information
 - **API Key Security**: Environment variables for sensitive data
 - **Public Data**: Uses only publicly available market data
 - **No Trading**: Educational tool only, no actual trading
-
-## 📝 License
-
-This project is for educational and research purposes. Use at your own risk.
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## 📞 Support
-
-For issues or questions:
-- Check the documentation
-- Review error logs
-- Ensure API keys are configured correctly
-- Verify data sources are accessible
-
----
 
 **Disclaimer**: This application is for educational purposes only. It does not constitute financial advice. Always do your own research and consult with financial professionals before making investment decisions.
  
