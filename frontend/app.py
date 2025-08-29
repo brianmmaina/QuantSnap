@@ -8,6 +8,7 @@ import pandas as pd
 import requests
 import plotly.graph_objects as go
 from datetime import datetime
+from typing import Dict
 import os
 from dotenv import load_dotenv
 
