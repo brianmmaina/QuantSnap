@@ -189,7 +189,7 @@ def init_database():
         with get_connection() as conn:
             with conn.cursor() as cur:
                 # Read and execute schema
-                schema_path = os.path.join(os.path.dirname(__file__), '..', 'database', 'schema.sql')
+                schema_path = os.path.join(os.path.dirname(__file__), 'schema.sql')
                 with open(schema_path, 'r') as f:
                     schema = f.read()
                     cur.execute(schema)
