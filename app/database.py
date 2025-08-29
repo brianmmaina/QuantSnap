@@ -302,7 +302,7 @@ class Database:
             current_price = hist['Close'].iloc[-1]
             start_price = hist['Close'].iloc[0]
             change = current_price - start_price
-            change_pct = (change / start_price) * 100
+            change_pct = (change / start_price) * 100 if start_price != 0 else 0.0
             
             # Calculate additional metrics
             returns = hist['Close'].pct_change().dropna()

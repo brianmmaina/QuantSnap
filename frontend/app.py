@@ -20,39 +20,30 @@ load_dotenv()
 bloomberg_template = dict(
     layout=dict(
         paper_bgcolor="#0B0F10",
-        plot_bgcolor="#0B0F10",
+        plot_bgcolor="#0E1317",   # contrast vs panel
         font=dict(family="JetBrains Mono, Menlo, monospace", color="#FFFFFF", size=13),
         xaxis=dict(
-            gridcolor="#2A3338", 
-            zerolinecolor="#2A3338", 
-            linecolor="#4A5568", 
+            showgrid=True,
+            gridcolor="rgba(255,255,255,0.08)",
+            zerolinecolor="rgba(255,255,255,0.10)",
+            linecolor="#4A5568",
             tickcolor="#4A5568",
             tickfont=dict(color="#FFFFFF", size=11),
             title=dict(font=dict(color="#FFFFFF", size=12))
         ),
         yaxis=dict(
-            gridcolor="#2A3338", 
-            zerolinecolor="#2A3338", 
-            linecolor="#4A5568", 
+            showgrid=True,
+            gridcolor="rgba(255,255,255,0.08)",
+            zerolinecolor="rgba(255,255,255,0.10)",
+            linecolor="#4A5568",
             tickcolor="#4A5568",
             tickfont=dict(color="#FFFFFF", size=11),
             title=dict(font=dict(color="#FFFFFF", size=12))
         ),
-        legend=dict(
-            bgcolor="#111417", 
-            bordercolor="#4A5568", 
-            font=dict(color="#FFFFFF", size=11)
-        ),
         margin=dict(l=50, r=30, t=50, b=50),
-        hoverlabel=dict(
-            bgcolor="#1A202C", 
-            bordercolor="#4A5568", 
-            font_color="#FFFFFF",
-            font_size=12
-        ),
+        hoverlabel=dict(bgcolor="#1A202C", bordercolor="#4A5568", font_color="#FFFFFF", font_size=12),
         colorway=["#00E676", "#00C2FF", "#FFB000", "#FF4D4D", "#A78BFA", "#64FFDA"],
-        title=dict(font=dict(color="#FFFFFF", size=16)),
-        annotations=[dict(font=dict(color="#FFFFFF"))]
+        title=dict(font=dict(color="#FFFFFF", size=16))
     )
 )
 pio.templates["bloomberg"] = bloomberg_template
@@ -361,6 +352,26 @@ html, body, [data-testid="stAppViewContainer"]{
 }
 
 [data-testid="metric-container"] [data-testid="metric-value"] {
+
+/* Dark selectbox */
+.stSelectbox div[data-baseweb="select"] {
+  background: var(--panel-2) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 10px !important;
+}
+.stSelectbox div[data-baseweb="select"] * { color: var(--text) !important; }
+.stSelectbox div[data-baseweb="select"] svg { fill: var(--text) !important; }
+
+/* If using 1M/3M/6M/1Y/MAX buttons anywhere */
+.stButton > button {
+  background: #12181D !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 10px !important;
+  font-weight: 700 !important;
+}
+.stButton > button:hover { border-color: var(--accent) !important; }
   color: var(--text) !important;
   font-size: 24px !important;
   font-weight: 800 !important;
@@ -620,20 +631,35 @@ if 'chart_period' not in st.session_state:
     st.session_state.chart_period = "3M"
 
 
-df = get_rankings_from_api("world_top_stocks", 10)
+df = get_rankings_from_api("world_top_stocks", 500)
 
 if df is not None and not df.empty:
     # Show data status
     st.sidebar.success(f"Data loaded: {len(df)} stocks")
     st.sidebar.info(f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
     
-    # Set ticker as index for compatibility
+    # Normalize tickers to uppercase and strip
     if 'ticker' in df.columns:
-        df = df.set_index('ticker')
-    
-    # Ensure we have the best stocks by sorting by score (highest first)
+        df['ticker'] = df['ticker'].astype(str).str.upper().str.strip()
+        df = df.drop_duplicates(subset=['ticker']).set_index('ticker')
+
+    # Coerce score to numeric
     if 'score' in df.columns:
-        df = df.sort_values('score', ascending=False)
+        df['score'] = pd.to_numeric(df['score'], errors='coerce')
+        df = df.dropna(subset=['score'])
+        # If scores > 10 then they're 0–100 scale; convert for display only
+        score_scale = 10 if df['score'].max() <= 10 else 100
+        
+        # If API already returns a rank column, prefer it for ordering
+        if 'rank' in df.columns:
+            df['rank'] = pd.to_numeric(df['rank'], errors='coerce')
+            df = df.dropna(subset=['rank']).sort_values('rank', ascending=True)
+        else:
+            # fall back to score sort
+            df = df.sort_values('score', ascending=False)
+    else:
+        st.error("Ranking data missing 'score' column")
+        st.stop()
     
     if df is not None and not df.empty:
         # Live Ticker Tape
@@ -672,74 +698,79 @@ if df is not None and not df.empty:
         
         neon_divider("TOP PERFORMERS")
         
-        try:
-            # Get top 10 stocks from AI rankings and fetch live data using same method as live stock prices
-            top_stocks = df.head(10).index.tolist()
-            
+        # Select the actual top-10 in that order
+        top10 = df.head(10).copy()
+        top_tickers = top10.index.tolist()
+        
+        # Fetch prices and render in the same order; handle missing
+        tickers_str = ','.join(top_tickers)
+        price_response = api_request(f"/prices/live?tickers={tickers_str}")
+        price_data = (price_response or {}).get('prices', {})
 
-            
-            tickers_str = ','.join(top_stocks)
-            
-            # Fetch live data using the same API endpoint as live stock prices
-            price_response = api_request(f"/prices/live?tickers={tickers_str}")
-            price_data = price_response.get('prices', {})
-            
-            if price_data:
-                # Display top performers in 2 columns
-                cols = st.columns(2)
-                
-                for i, ticker in enumerate(top_stocks, 1):
-                    if ticker in price_data:
-                        data = price_data[ticker]
-                        score = df.loc[ticker, 'score']
-                        
-                        # Convert score to 0-10 scale and determine color class
-                        score_10 = min(score / 10, 10)  # Convert to 0-10 scale, cap at 10
-                        score_class = "c-up" if score_10 > 7 else "c-warn" if score_10 > 4 else "c-muted" if score_10 > 1 else "c-down"
-                        
-                        # Get company name from original data
-                        company_name = df.loc[ticker, 'name'] if 'name' in df.columns else ticker
-                        
-                        # Left column: ranks 1-5, Right column: ranks 6-10
-                        with cols[0] if i <= 5 else cols[1]:
-                            st.markdown(f"""
-                            <a href="https://finance.yahoo.com/quote/{ticker}" target="_blank" style="text-decoration: none; color: inherit;">
-                                <div class="stock-card" style="cursor: pointer; transition: background-color 0.2s; margin-bottom: 16px;">
-                                  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-                                    <div class="badge" style="font-size: 14px; font-weight: 800;">#{i}</div>
-                                    <div style="font-weight: 700; font-size: 16px; color: var(--accent);">{ticker}</div>
-                                  </div>
-                                  <div style="font-weight: 600; font-size: 14px; color: var(--text); margin-bottom: 8px; line-height: 1.3;">
-                                    {company_name}
-                                  </div>
-                                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-                                    <div>
-                                      <div style="font-size: 12px; color: var(--muted);">Rating</div>
-                                      <div style="font-weight: 700; font-size: 16px;" class="{score_class}">{score_10:.1f}</div>
-                                    </div>
-                                    <div>
-                                      <div style="font-size: 12px; color: var(--muted);">Daily Change</div>
-                                      <div style="font-weight: 700; font-size: 16px;" class="{'c-up' if data['change_pct']>=0 else 'c-down'}">{data['change_pct']:+.2f}%</div>
-                                    </div>
-                                  </div>
-                                  <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <div>
-                                      <div style="font-size: 12px; color: var(--muted);">Volume</div>
-                                      <div style="font-weight: 600; font-size: 14px;" class="c-muted">{data['volume']:,}</div>
-                                    </div>
-                                    <div style="text-align: right;">
-                                      <div style="font-size: 12px; color: var(--muted);">Price</div>
-                                      <div style="font-weight: 700; font-size: 16px;">${data['price']:.2f}</div>
-                                    </div>
-                                  </div>
-                                </div>
-                            </a>
-                            """, unsafe_allow_html=True)
-            else:
-                st.markdown('<div class="alert alert-warning">Could not fetch live data for top performers</div>', unsafe_allow_html=True)
-                
-        except Exception as e:
-            st.markdown(f'<div class="alert alert-warning">Top performers data temporarily unavailable: {str(e)}</div>', unsafe_allow_html=True)
+        cols = st.columns(2)
+        for i, ticker in enumerate(top_tickers, start=1):
+            data = price_data.get(ticker)  # may be None
+            score = top10.loc[ticker, 'score']
+            # Display score on 0–10 scale consistently
+            score_10 = score if score_scale == 10 else round(min(score/10, 10), 1)
+
+            score_class = ("c-up" if score_10 > 7 else
+                           "c-warn" if score_10 > 4 else
+                           "c-muted" if score_10 > 1 else
+                           "c-down")
+
+            company_name = top10.loc[ticker, 'name'] if 'name' in top10.columns else ticker
+
+            with cols[0] if i <= 5 else cols[1]:
+                if not data:
+                    # Graceful fallback card when live price missing
+                    st.markdown(f"""
+                    <div class="stock-card" style="margin-bottom:16px;">
+                      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+                        <div class="badge" style="font-size:14px;font-weight:800;">#{i}</div>
+                        <div style="font-weight:700;font-size:16px;color:var(--accent);">{ticker}</div>
+                      </div>
+                      <div style="font-weight:600;font-size:14px;color:var(--text);margin-bottom:8px;line-height:1.3;">
+                        {company_name}
+                      </div>
+                      <div style="font-size:12px;color:var(--muted);">Price unavailable</div>
+                      <div style="font-size:12px;color:var(--muted);">Rating</div>
+                      <div style="font-weight:700;font-size:16px;" class="{score_class}">{score_10:.1f}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    change_cls = "c-up" if data['change_pct'] >= 0 else "c-down"
+                    st.markdown(f"""
+                    <a href="https://finance.yahoo.com/quote/{ticker}" target="_blank" style="text-decoration:none;color:inherit;">
+                      <div class="stock-card" style="cursor:pointer;margin-bottom:16px;">
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+                          <div class="badge" style="font-size:14px;font-weight:800;">#{i}</div>
+                          <div style="font-weight:700;font-size:16px;color:var(--accent);">{ticker}</div>
+                        </div>
+                        <div style="font-weight:600;font-size:14px;color:var(--text);margin-bottom:8px;line-height:1.3;">{company_name}</div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+                          <div>
+                            <div style="font-size:12px;color:var(--muted);">Rating</div>
+                            <div style="font-weight:700;font-size:16px;" class="{score_class}">{score_10:.1f}</div>
+                          </div>
+                          <div>
+                            <div style="font-size:12px;color:var(--muted);">Daily Change</div>
+                            <div style="font-weight:700;font-size:16px;" class="{change_cls}">{data['change_pct']:+.2f}%</div>
+                          </div>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                          <div>
+                            <div style="font-size:12px;color:var(--muted);">Volume</div>
+                            <div style="font-weight:600;font-size:14px;" class="c-muted">{data['volume']:,}</div>
+                          </div>
+                          <div style="text-align:right;">
+                            <div style="font-size:12px;color:var(--muted);">Price</div>
+                            <div style="font-weight:700;font-size:16px;">${data['price']:.2f}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </a>
+                    """, unsafe_allow_html=True)
         
         neon_divider("MARKET CHARTS")
         
@@ -769,6 +800,17 @@ if df is not None and not df.empty:
                 st.error(f"Could not fetch data for {chart_stock}. Please check the stock symbol.")
                 st.stop()
             
+            # Determine currency and set y-axis label/ticks
+            currency = None
+            try:
+                import yfinance as yf
+                fi = yf.Ticker(chart_stock).fast_info
+                currency = getattr(fi, "currency", None) or (fi.get("currency") if isinstance(fi, dict) else None)
+            except Exception:
+                pass
+
+            yaxis_label = f"Price ({currency})" if currency else "Price"
+            
             # Sanitize the price series
             price_series = hist["Close"].dropna()
             price_series.index = pd.to_datetime(price_series.index).tz_localize(None)
@@ -780,14 +822,16 @@ if df is not None and not df.empty:
             
             # Period selection with stateful control
             period_options = ["1M", "3M", "6M", "1Y", "MAX"]
+            default_period = st.session_state.get("chart_period", "3M")
+            if default_period not in period_options:
+                default_period = "3M"
+
             selected_period_key = st.selectbox(
                 "Select Time Period",
                 options=period_options,
-                index=period_options.index(st.session_state.chart_period),
+                index=period_options.index(default_period),
                 key="period_selector"
             )
-            
-            # Update session state
             st.session_state.chart_period = selected_period_key
             
             # Map period to days
@@ -833,6 +877,16 @@ if df is not None and not df.empty:
                 connectgaps=True
             ))
             
+            # Boost visibility regardless of template
+            fig.update_traces(
+                line=dict(width=3, color="#00E676"),
+                fill="tozeroy",
+                fillcolor="rgba(0,230,118,0.20)",
+                connectgaps=True
+            )
+            fig.update_layout(plot_bgcolor="#0E1317", paper_bgcolor="#0E1317")
+            fig.update_xaxes(type="date", rangebreaks=[dict(bounds=["sat", "mon"])])  # hide weekends
+            
             # Create title with company name if available
             title_text = f"{chart_stock} Price Chart - {period_name}"
             if company_name and company_name != chart_stock:
@@ -848,7 +902,7 @@ if df is not None and not df.empty:
                     font=dict(color='var(--text, #E6EDF3)', size=14)
                 ),
                 yaxis_title=dict(
-                    text="Price ($)",
+                    text=yaxis_label,
                     font=dict(color='var(--text, #E6EDF3)', size=14)
                 ),
                 height=400,
@@ -882,13 +936,17 @@ if df is not None and not df.empty:
                 )
             )
             
+            # Add USD tickformat if currency is USD
+            if currency and str(currency).upper() == "USD":
+                fig.update_yaxes(tickformat="$,.2f")
+            
             st.plotly_chart(fig, use_container_width=True, theme=None)
             
             # Calculate metrics after chart_data is valid
             current_price = chart_data.iloc[-1]
             start_price = chart_data.iloc[0]
             change = current_price - start_price
-            change_pct = (change / start_price) * 100
+            change_pct = (change / start_price) * 100 if start_price != 0 else 0.0
             
             # Chart metrics using existing card styling
             col1, col2, col3, col4 = st.columns(4)
