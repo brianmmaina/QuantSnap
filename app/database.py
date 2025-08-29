@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Database management for QuantSnap - Real-time yfinance data
+Database management for QuantSnap - Alpha Vantage + yfinance fallback
 """
 
 import yfinance as yf
@@ -11,6 +11,7 @@ import logging
 import time
 from typing import List, Dict, Optional
 from pathlib import Path
+from .data_provider import AlphaVantageProvider
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,9 @@ class Database:
     def __init__(self):
         self.data_dir = Path("data")
         self.data_dir.mkdir(exist_ok=True)
+        
+        # Initialize Alpha Vantage provider
+        self.alpha_vantage = AlphaVantageProvider()
         
         # Focused stock universe - top stocks only
         self.stocks = [
@@ -37,10 +41,19 @@ class Database:
         ]
     
     def get_stock_data(self, ticker: str) -> Optional[Dict]:
-        """Get comprehensive stock data directly from yfinance with rate limiting"""
+        """Get comprehensive stock data from Alpha Vantage with yfinance fallback"""
         try:
-            # Add delay to prevent rate limiting
-            time.sleep(0.1)  # 100ms delay between requests
+            # Try Alpha Vantage first
+            if self.alpha_vantage.api_key:
+                data = self.alpha_vantage.get_stock_data(ticker)
+                if data:
+                    logger.info(f"Successfully fetched {ticker} from Alpha Vantage")
+                    return data
+                else:
+                    logger.warning(f"Alpha Vantage failed for {ticker}, trying yfinance...")
+            
+            # Fallback to yfinance
+            time.sleep(0.1)  # Rate limiting for yfinance
             
             stock = yf.Ticker(ticker)
             hist = stock.history(period="1y")
@@ -53,21 +66,18 @@ class Database:
             returns = hist['Close'].pct_change().dropna()
             
             # Calculate accurate momentum using proper date ranges
-            # 1 month = ~21 trading days
             if len(hist) >= 21:
                 month_ago_price = hist['Close'].iloc[-21]
                 momentum_1m = ((current_price / month_ago_price) - 1) * 100
             else:
                 momentum_1m = 0
                 
-            # 3 months = ~63 trading days
             if len(hist) >= 63:
                 three_months_ago_price = hist['Close'].iloc[-63]
                 momentum_3m = ((current_price / three_months_ago_price) - 1) * 100
             else:
                 momentum_3m = 0
                 
-            # 6 months = ~126 trading days
             if len(hist) >= 126:
                 six_months_ago_price = hist['Close'].iloc[-126]
                 momentum_6m = ((current_price / six_months_ago_price) - 1) * 100
@@ -87,19 +97,17 @@ class Database:
             else:
                 sharpe_ratio = 0
             
-            # Get current vs previous close for actual daily change
-            current_price = hist['Close'].iloc[-1]
+            # Daily change
             previous_close = hist['Close'].iloc[-2] if len(hist) > 1 else current_price
             daily_change = current_price - previous_close
             daily_change_pct = (daily_change / previous_close) * 100 if previous_close > 0 else 0
             
-            # Company info from yfinance
+            # Company info
             company_name = info.get('longName', info.get('shortName', ticker))
             sector = info.get('sector', 'Unknown')
             market_cap = info.get('marketCap', 0)
-            logo_url = info.get('logo_url', '')
             
-            # Calculate composite score (realistic scoring)
+            # Calculate composite score
             score = (
                 (momentum_1m * 0.4) +      # 1M momentum weight
                 (momentum_3m * 0.3) +      # 3M momentum weight
@@ -112,7 +120,6 @@ class Database:
                 'ticker': ticker,
                 'name': company_name,
                 'sector': sector,
-                'logo_url': logo_url,
                 'price': round(current_price, 2),
                 'momentum_1m': round(momentum_1m, 2),
                 'momentum_3m': round(momentum_3m, 2),
@@ -135,7 +142,17 @@ class Database:
             return None
     
     def get_live_prices(self, tickers: List[str]) -> Dict:
-        """Get live prices for multiple stocks from yfinance"""
+        """Get live prices for multiple stocks from Alpha Vantage with yfinance fallback"""
+        # Try Alpha Vantage first
+        if self.alpha_vantage.api_key:
+            price_data = self.alpha_vantage.get_live_prices(tickers)
+            if price_data:
+                logger.info(f"Successfully fetched live prices from Alpha Vantage")
+                return price_data
+            else:
+                logger.warning("Alpha Vantage live prices failed, trying yfinance...")
+        
+        # Fallback to yfinance
         price_data = {}
         
         for ticker in tickers:
