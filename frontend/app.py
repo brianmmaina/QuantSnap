@@ -382,7 +382,7 @@ if df is not None and not df.empty:
 
         c3.markdown(f"""
         <div class="card">
-          <div class="section-title">AVG 1M RETURN</div>
+          <div class="section-title">AVG 1M MOMENTUM</div>
           <div style="font-size:28px;font-weight:800"
                class="{ 'c-up' if df['momentum_1m'].mean()>=0 else 'c-down' }">
             {df['momentum_1m'].mean():.1f}%
@@ -391,8 +391,8 @@ if df is not None and not df.empty:
 
         c4.markdown(f"""
         <div class="card">
-          <div class="section-title">AVG 3M RETURN</div>
-          <div style="font-size:28px;font-weight:800" class="c-info">{df['momentum_3m'].mean():.1%}</div>
+          <div class="section-title">AVG 3M MOMENTUM</div>
+          <div style="font-size:28px;font-weight:800" class="c-info">{df['momentum_3m'].mean():.1f}%</div>
         </div>""", unsafe_allow_html=True)
         
         neon_divider("TOP PERFORMERS")

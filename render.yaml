@@ -4,8 +4,9 @@ services:
     name: quantsnap-frontend
     env: python
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install --no-cache-dir -r requirements.txt
     startCommand: streamlit run frontend/app.py --server.port $PORT --server.address 0.0.0.0
+    autoDeploy: false
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
@@ -21,8 +22,9 @@ services:
     name: quantsnap-backend
     env: python
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install --no-cache-dir -r requirements.txt
     startCommand: python app/main.py
+    autoDeploy: false
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0

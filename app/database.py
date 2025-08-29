@@ -114,67 +114,6 @@ class Database:
                 (1 / (pe_ratio + 1) * 0.05) # P/E factor (5% weight)
             )
             
-            stock = yf.Ticker(ticker)
-            hist = stock.history(period="1y")
-            info = stock.info
-            
-            if hist.empty or len(hist) < 30:
-                return None
-            
-            current_price = hist['Close'].iloc[-1]
-            returns = hist['Close'].pct_change().dropna()
-            
-            # Calculate accurate momentum using proper date ranges
-            if len(hist) >= 21:
-                month_ago_price = hist['Close'].iloc[-21]
-                momentum_1m = ((current_price / month_ago_price) - 1) * 100
-            else:
-                momentum_1m = 0
-                
-            if len(hist) >= 63:
-                three_months_ago_price = hist['Close'].iloc[-63]
-                momentum_3m = ((current_price / three_months_ago_price) - 1) * 100
-            else:
-                momentum_3m = 0
-                
-            if len(hist) >= 126:
-                six_months_ago_price = hist['Close'].iloc[-126]
-                momentum_6m = ((current_price / six_months_ago_price) - 1) * 100
-            else:
-                momentum_6m = 0
-            
-            # Volatility
-            volatility_30d = returns.tail(30).std() * 100 if len(returns) >= 30 else returns.std() * 100
-            
-            # Volume
-            volume_avg_20d = hist['Volume'].tail(20).mean() if len(hist) >= 20 else hist['Volume'].mean()
-            
-            # Sharpe ratio
-            if len(returns) >= 63:
-                returns_3m = returns.tail(63)
-                sharpe_ratio = (returns_3m.mean() / returns_3m.std()) * np.sqrt(252) if returns_3m.std() > 0 else 0
-            else:
-                sharpe_ratio = 0
-            
-            # Daily change
-            previous_close = hist['Close'].iloc[-2] if len(hist) > 1 else current_price
-            daily_change = current_price - previous_close
-            daily_change_pct = (daily_change / previous_close) * 100 if previous_close > 0 else 0
-            
-            # Company info
-            company_name = info.get('longName', info.get('shortName', ticker))
-            sector = info.get('sector', 'Unknown')
-            market_cap = info.get('marketCap', 0)
-            
-            # Calculate composite score
-            score = (
-                (momentum_1m * 0.4) +      # 1M momentum weight
-                (momentum_3m * 0.3) +      # 3M momentum weight
-                (sharpe_ratio * 2.0) +     # Sharpe ratio weight
-                (volume_avg_20d / 1000000 * 0.1) + # Volume factor
-                (market_cap / 1e12 * 0.1)  # Market cap factor
-            )
-            
             return {
                 'ticker': ticker,
                 'name': company_name,
