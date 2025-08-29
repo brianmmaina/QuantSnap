@@ -89,7 +89,7 @@ class Database:
             
             # Beta calculation (vs SPY)
             try:
-                spy_data = yf.download('SPY', period="1y", progress=False)
+                spy_data = yf.download('SPY', period="1y", progress=False, auto_adjust=True)
                 if not spy_data.empty and len(spy_data) >= 30:
                     spy_returns = spy_data['Close'].pct_change().dropna()
                     stock_returns = hist['Close'].pct_change().dropna()
