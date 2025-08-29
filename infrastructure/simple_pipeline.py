@@ -40,6 +40,10 @@ class SimpleDataPipeline:
             logger.info(f"Processing batch {i//batch_size + 1}: {batch}")
             
             try:
+                # Ensure batch is a list of strings
+                batch = [str(ticker) for ticker in batch if ticker]
+                logger.info(f"Downloading batch: {batch}")
+                
                 data = yf.download(
                     batch,
                     period=period,
