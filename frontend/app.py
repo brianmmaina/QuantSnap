@@ -532,12 +532,18 @@ st.markdown("""
       </div>
     </div>
     <div>
-      <div style="font-weight: 700; color: var(--accent); margin-bottom: 8px;">DATA SOURCES</div>
+      <div style="font-weight: 700; color: var(--accent); margin-bottom: 8px;">RATING SCALE & DATA</div>
       <div style="font-size: 14px; line-height: 1.5; color: var(--text);">
-        • <strong>Yahoo Finance:</strong> Real-time prices & fundamentals<br>
-        • <strong>500+ Stocks:</strong> Comprehensive market coverage<br>
-        • <strong>Daily Updates:</strong> Fresh data every session<br>
-        • <strong>Auto-adjusted:</strong> Splits & dividends included
+        <strong>Rating Scale (0-10):</strong><br>
+        • <span style="color: var(--up);">7-10:</span> Excellent performance<br>
+        • <span style="color: var(--warn);">4-7:</span> Good performance<br>
+        • <span style="color: var(--muted);">1-4:</span> Average performance<br>
+        • <span style="color: var(--down);">0-1:</span> Poor performance<br>
+        <br>
+        <strong>Data Sources:</strong><br>
+        • <strong>Yahoo Finance:</strong> Real-time prices & growth<br>
+        • <strong>500+ Stocks:</strong> Comprehensive coverage<br>
+        • <strong>Live Updates:</strong> Fresh data every session
       </div>
     </div>
   </div>
@@ -648,13 +654,22 @@ if df is not None and not df.empty:
                     hist = stock.history(period="3mo", auto_adjust=True)
                     
                     if not hist.empty and len(hist) > 20:
-                        current_price = hist['Close'].iloc[-1]
-                        month_ago_price = hist['Close'].iloc[-21] if len(hist) >= 21 else hist['Close'].iloc[0]
-                        three_month_ago_price = hist['Close'].iloc[0]
+                        # Use yfinance's built-in percentage change methods for accuracy
+                        hist_1m = stock.history(period="1mo", auto_adjust=True)
+                        hist_3m = stock.history(period="3mo", auto_adjust=True)
                         
-                        # Calculate percentage changes
-                        change_1m = ((current_price / month_ago_price) - 1) * 100
-                        change_3m = ((current_price / three_month_ago_price) - 1) * 100
+                        # Get percentage changes using yfinance's pct_change method
+                        if len(hist_1m) > 5:
+                            change_1m = hist_1m['Close'].pct_change().iloc[-1] * 100
+                        else:
+                            change_1m = 0
+                            
+                        if len(hist_3m) > 20:
+                            change_3m = hist_3m['Close'].pct_change().iloc[-1] * 100
+                        else:
+                            change_3m = 0
+                        
+                        current_price = hist['Close'].iloc[-1]
                         
                         # Get daily change
                         previous_close = info.get('regularMarketPreviousClose', current_price)
@@ -689,7 +704,9 @@ if df is not None and not df.empty:
                     data = live_data[ticker]
                     score = df.loc[ticker, 'score']
                     
-                    score_class = "c-up" if score > 10 else "c-warn" if score > 5 else "c-muted" if score > 0 else "c-down"
+                    # Convert score to 0-10 scale and determine color class
+                    score_10 = min(score / 10, 10)  # Convert to 0-10 scale, cap at 10
+                    score_class = "c-up" if score_10 > 7 else "c-warn" if score_10 > 4 else "c-muted" if score_10 > 1 else "c-down"
                     
                     # Left column: ranks 1-5, Right column: ranks 6-10
                     with cols[0] if i <= 5 else cols[1]:
@@ -706,7 +723,7 @@ if df is not None and not df.empty:
                               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
                                 <div>
                                   <div style="font-size: 12px; color: var(--muted);">Rating</div>
-                                  <div style="font-weight: 700; font-size: 16px;" class="{score_class}">{score:.1f}</div>
+                                  <div style="font-weight: 700; font-size: 16px;" class="{score_class}">{score_10:.1f}</div>
                                 </div>
                                 <div>
                                   <div style="font-size: 12px; color: var(--muted);">1M Growth</div>
@@ -735,7 +752,9 @@ if df is not None and not df.empty:
                 growth_1m = row['momentum_1m']
                 company_name = row.get('name', ticker)
                 
-                score_class = "c-up" if score>10 else "c-warn" if score>5 else "c-muted" if score>0 else "c-down"
+                # Convert score to 0-10 scale and determine color class
+                score_10 = min(score / 10, 10)  # Convert to 0-10 scale, cap at 10
+                score_class = "c-up" if score_10>7 else "c-warn" if score_10>4 else "c-muted" if score_10>1 else "c-down"
                 
                 with cols[0] if i <= 5 else cols[1]:
                     st.markdown(f"""
@@ -751,7 +770,7 @@ if df is not None and not df.empty:
                           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
                             <div>
                               <div style="font-size: 12px; color: var(--muted);">Rating</div>
-                              <div style="font-weight: 700; font-size: 16px;" class="{score_class}">{score:.1f}</div>
+                              <div style="font-weight: 700; font-size: 16px;" class="{score_class}">{score_10:.1f}</div>
                             </div>
                             <div>
                               <div style="font-size: 12px; color: var(--muted);">1M Growth</div>
@@ -862,11 +881,15 @@ if df is not None and not df.empty:
                         x=chart_data.index,
                         y=chart_data.values,
                         mode='lines',
-                        line=dict(color='#00FF88', width=3),  # Brighter green with thicker line
+                        line=dict(
+                            color='#00FF88', 
+                            width=4,  # Even thicker line for better visibility
+                            shape='spline'  # Smooth line for better appearance
+                        ),
                         name=f'{chart_stock} Price',
                         hovertemplate='<b>%{x}</b><br>Price: $%{y:.2f}<extra></extra>',
                         fill='tonexty',  # Add subtle fill below the line
-                        fillcolor='rgba(0, 255, 136, 0.1)'  # Very light green fill
+                        fillcolor='rgba(0, 255, 136, 0.15)'  # Slightly more visible fill
                     ))
                     
 
@@ -877,22 +900,45 @@ if df is not None and not df.empty:
                         title_text = f"{chart_stock} ({company_name}) - {period_name}"
                     
                     fig.update_layout(
-                        title=title_text,
-                        xaxis_title="Date",
-                        yaxis_title="Price ($)",
+                        title=dict(
+                            text=title_text,
+                            font=dict(color='#FFFFFF', size=18, family='JetBrains Mono, Menlo, monospace')
+                        ),
+                        xaxis_title=dict(
+                            text="Date",
+                            font=dict(color='#FFFFFF', size=14)
+                        ),
+                        yaxis_title=dict(
+                            text="Price ($)",
+                            font=dict(color='#FFFFFF', size=14)
+                        ),
                         height=400,
                         showlegend=False,
                         hovermode='x unified',
-                        template="bloomberg",
-                        plot_bgcolor='rgba(0,0,0,0)',  # Transparent plot background
-                        paper_bgcolor='rgba(0,0,0,0)',  # Transparent paper background
+                        plot_bgcolor='#0B0F10',  # Dark background matching the theme
+                        paper_bgcolor='#0B0F10',  # Dark background matching the theme
                         xaxis=dict(
-                            gridcolor='rgba(255,255,255,0.1)',  # Subtle white grid
-                            zerolinecolor='rgba(255,255,255,0.1)'
+                            gridcolor='#2A3338',  # Visible grid lines
+                            zerolinecolor='#2A3338',
+                            linecolor='#4A5568',
+                            tickcolor='#4A5568',
+                            tickfont=dict(color='#FFFFFF', size=11),
+                            title=dict(font=dict(color='#FFFFFF', size=12))
                         ),
                         yaxis=dict(
-                            gridcolor='rgba(255,255,255,0.1)',  # Subtle white grid
-                            zerolinecolor='rgba(255,255,255,0.1)'
+                            gridcolor='#2A3338',  # Visible grid lines
+                            zerolinecolor='#2A3338',
+                            linecolor='#4A5568',
+                            tickcolor='#4A5568',
+                            tickfont=dict(color='#FFFFFF', size=11),
+                            title=dict(font=dict(color='#FFFFFF', size=12))
+                        ),
+                        margin=dict(l=50, r=30, t=50, b=50),
+                        hoverlabel=dict(
+                            bgcolor='#1A202C',
+                            bordercolor='#4A5568',
+                            font_color='#FFFFFF',
+                            font_size=12
                         )
                     )
                     
