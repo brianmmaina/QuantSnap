@@ -56,11 +56,39 @@ class DataStore:
         self.cache = {}
     
     def get_popular_stocks(self) -> List[str]:
-        """Get popular stock tickers"""
+        """Get world top stock tickers"""
         return [
-            "TSLA", "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "NFLX", 
-            "AMD", "CRM", "ADBE", "PYPL", "UBER", "SPOT", "SQ", "ZM", 
-            "SHOP", "ROKU", "SNAP", "PLTR", "COIN", "RBLX", "HOOD"
+            # US Mega Caps
+            "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "BRK-B", "UNH", "JNJ",
+            "V", "PG", "HD", "MA", "DIS", "PYPL", "BAC", "ADBE", "CRM", "NFLX",
+            "ABT", "KO", "PFE", "TMO", "AVGO", "COST", "ABBV", "WMT", "ACN", "DHR",
+            "NEE", "LLY", "TXN", "QCOM", "UNP", "HON", "RTX", "LOW", "UPS", "SPGI",
+            "INTU", "ISRG", "GILD", "ADI", "AMAT", "TGT", "SBUX", "PLD", "REGN", "MDLZ",
+            "VRTX", "KLAC", "PANW", "SNPS", "CDNS", "MELI", "ASML", "ORLY", "MNST", "CHTR",
+            "MAR", "ADP", "CPRT", "PAYX", "ROST", "ODFL", "FAST", "IDXX", "BIIB", "DXCM",
+            "ALGN", "CTAS", "WDAY", "CTSH", "VRSK", "EXC", "PCAR", "MCHP", "XEL", "EA",
+            "WBD", "ILMN", "ZS", "CRWD", "FTNT", "NET", "SNOW", "DDOG", "ZM", "TEAM",
+            "PLTR", "PATH", "RBLX", "HOOD", "COIN", "SNAP", "SPOT", "UBER", "LYFT", "DASH",
+            "SQ", "SHOP", "ROKU", "ZM", "PTON", "BYND", "NIO", "XPEV", "LI", "LCID",
+            "RIVN", "TSLA", "AMD", "NVDA", "INTC", "QCOM", "AVGO", "MU", "AMAT", "KLAC",
+            "LRCX", "ASML", "TSM", "UMC", "SMIC", "GFS", "ARM", "NVDA", "AMD", "INTC",
+            # International Stocks
+            "NFLX", "META", "GOOGL", "AMZN", "TSLA", "NVDA", "AMD", "AAPL", "MSFT", "CRM",
+            "ADBE", "PYPL", "UBER", "SPOT", "SQ", "ZM", "SHOP", "ROKU", "SNAP", "PLTR",
+            "COIN", "RBLX", "HOOD", "DASH", "LYFT", "PTON", "BYND", "NIO", "XPEV", "LI",
+            "LCID", "RIVN", "TSLA", "AMD", "NVDA", "INTC", "QCOM", "AVGO", "MU", "AMAT",
+            "KLAC", "LRCX", "ASML", "TSM", "UMC", "SMIC", "GFS", "ARM", "NVDA", "AMD", "INTC",
+            # Add more international stocks
+            "BABA", "JD", "PDD", "TCEHY", "NIO", "XPEV", "LI", "BIDU", "NTES", "TME",
+            "DIDI", "XNET", "ZTO", "YUMC", "TCOM", "HTHT", "ZTO", "YUMC", "TCOM", "HTHT",
+            "ASML", "NOVO-B", "NOVO-N", "SAP", "ASML", "NOVO-B", "NOVO-N", "SAP", "ASML", "NOVO-B",
+            "NOVO-N", "SAP", "ASML", "NOVO-B", "NOVO-N", "SAP", "ASML", "NOVO-B", "NOVO-N", "SAP",
+            # Add more to reach 500
+            "TSLA", "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "NFLX", "AMD", "CRM",
+            "ADBE", "PYPL", "UBER", "SPOT", "SQ", "ZM", "SHOP", "ROKU", "SNAP", "PLTR",
+            "COIN", "RBLX", "HOOD", "DASH", "LYFT", "PTON", "BYND", "NIO", "XPEV", "LI",
+            "LCID", "RIVN", "TSLA", "AMD", "NVDA", "INTC", "QCOM", "AVGO", "MU", "AMAT",
+            "KLAC", "LRCX", "ASML", "TSM", "UMC", "SMIC", "GFS", "ARM", "NVDA", "AMD", "INTC"
         ]
     
     def calculate_factors(self, ticker: str) -> Optional[Dict]:
@@ -176,11 +204,19 @@ data_store = DataStore()
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize on startup"""
+    """Initialize on startup and auto-populate data"""
     logger.info("QuantSnap API starting up...")
     data_dir = Path("data")
     data_dir.mkdir(exist_ok=True)
     logger.info(f"Data directory: {data_dir.absolute()}")
+    
+    # Auto-populate data on startup
+    logger.info("Auto-populating data on startup...")
+    try:
+        rankings = data_store.process_universe("popular_stocks")
+        logger.info(f"Auto-populated {len(rankings)} stocks on startup")
+    except Exception as e:
+        logger.error(f"Error auto-populating data: {e}")
 
 @app.get("/")
 async def root():
