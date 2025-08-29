@@ -52,19 +52,25 @@ class Database:
             current_price = hist['Close'].iloc[-1]
             returns = hist['Close'].pct_change().dropna()
             
-            # Calculate accurate momentum using pandas pct_change
+            # Calculate accurate momentum using proper date ranges
+            # 1 month = ~21 trading days
             if len(hist) >= 21:
-                momentum_1m = hist['Close'].pct_change(21).iloc[-1] * 100
+                month_ago_price = hist['Close'].iloc[-21]
+                momentum_1m = ((current_price / month_ago_price) - 1) * 100
             else:
                 momentum_1m = 0
                 
+            # 3 months = ~63 trading days
             if len(hist) >= 63:
-                momentum_3m = hist['Close'].pct_change(63).iloc[-1] * 100
+                three_months_ago_price = hist['Close'].iloc[-63]
+                momentum_3m = ((current_price / three_months_ago_price) - 1) * 100
             else:
                 momentum_3m = 0
                 
+            # 6 months = ~126 trading days
             if len(hist) >= 126:
-                momentum_6m = hist['Close'].pct_change(126).iloc[-1] * 100
+                six_months_ago_price = hist['Close'].iloc[-126]
+                momentum_6m = ((current_price / six_months_ago_price) - 1) * 100
             else:
                 momentum_6m = 0
             
@@ -81,34 +87,32 @@ class Database:
             else:
                 sharpe_ratio = 0
             
-            # Price changes - get actual daily change
-            price_change_1d = hist['Close'].pct_change().iloc[-1] * 100
-            price_change_5d = hist['Close'].pct_change(5).iloc[-1] * 100 if len(hist) >= 5 else 0
-            
             # Get current vs previous close for actual daily change
             current_price = hist['Close'].iloc[-1]
             previous_close = hist['Close'].iloc[-2] if len(hist) > 1 else current_price
             daily_change = current_price - previous_close
             daily_change_pct = (daily_change / previous_close) * 100 if previous_close > 0 else 0
             
-            # Company info
+            # Company info from yfinance
             company_name = info.get('longName', info.get('shortName', ticker))
             sector = info.get('sector', 'Unknown')
             market_cap = info.get('marketCap', 0)
+            logo_url = info.get('logo_url', '')
             
-            # Calculate composite score (adjusted for realistic percentages)
+            # Calculate composite score (realistic scoring)
             score = (
-                (momentum_1m * 2.0) +  # 1M momentum (typically -20% to +30%)
-                (momentum_3m * 1.5) +  # 3M momentum (typically -40% to +60%)
-                (sharpe_ratio * 5.0) + # Sharpe ratio (typically 0 to 3)
+                (momentum_1m * 0.4) +      # 1M momentum weight
+                (momentum_3m * 0.3) +      # 3M momentum weight
+                (sharpe_ratio * 2.0) +     # Sharpe ratio weight
                 (volume_avg_20d / 1000000 * 0.1) + # Volume factor
-                (market_cap / 1e12 * 0.1) # Market cap factor
+                (market_cap / 1e12 * 0.1)  # Market cap factor
             )
             
             return {
                 'ticker': ticker,
                 'name': company_name,
                 'sector': sector,
+                'logo_url': logo_url,
                 'price': round(current_price, 2),
                 'momentum_1m': round(momentum_1m, 2),
                 'momentum_3m': round(momentum_3m, 2),
@@ -116,8 +120,6 @@ class Database:
                 'volatility': round(volatility_30d, 2),
                 'volume_avg': round(volume_avg_20d, 0),
                 'sharpe_ratio': round(sharpe_ratio, 2),
-                'price_change_1d': round(price_change_1d, 2),
-                'price_change_5d': round(price_change_5d, 2),
                 'daily_change': round(daily_change, 2),
                 'daily_change_pct': round(daily_change_pct, 2),
                 'market_cap': market_cap,

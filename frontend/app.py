@@ -314,10 +314,10 @@ st.write("")
 def ticker_tape(df):
     items = []
     for t, r in df.head(10).iterrows():
-        # Use daily change percentage for ticker tape (actual current change)
-        daily_change = r.get('daily_change_pct', r.get('momentum_1m', 0))
-        cls = "c-up" if daily_change>=0 else "c-down"
-        items.append(f"<span class='badge'>{t}</span> <span class='{cls}'>{daily_change:+.1%}</span>")
+        # Use 1-month momentum for ticker tape (more stable)
+        momentum_1m = r.get('momentum_1m', 0)
+        cls = "c-up" if momentum_1m>=0 else "c-down"
+        items.append(f"<span class='badge'>{t}</span> <span class='{cls}'>{momentum_1m:+.1f}%</span>")
     html = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;".join(items)
     st.markdown(f"""
     <style>
@@ -382,10 +382,10 @@ if df is not None and not df.empty:
 
         c3.markdown(f"""
         <div class="card">
-          <div class="section-title">AVG DAILY CHANGE</div>
+          <div class="section-title">AVG 1M RETURN</div>
           <div style="font-size:28px;font-weight:800"
-               class="{ 'c-up' if df.get('daily_change_pct', df['momentum_1m']).mean()>=0 else 'c-down' }">
-            {df.get('daily_change_pct', df['momentum_1m']).mean():.1%}
+               class="{ 'c-up' if df['momentum_1m'].mean()>=0 else 'c-down' }">
+            {df['momentum_1m'].mean():.1f}%
           </div>
         </div>""", unsafe_allow_html=True)
 
@@ -399,24 +399,46 @@ if df is not None and not df.empty:
         cols = st.columns(2)
 
         for i, (ticker, row) in enumerate(df.head(10).iterrows(), 1):
-            score = row['score']; mom = row['momentum_1m']; sharpe = row.get('sharpe_ratio', 0)
-            score_class = "c-up" if score>1 else "c-warn" if score>0.5 else "c-muted" if score>0 else "c-down"
+            score = row['score']
+            momentum_1m = row['momentum_1m']
+            sharpe = row.get('sharpe_ratio', 0)
+            company_name = row.get('name', ticker)
+            logo_url = row.get('logo_url', '')
+            
+            score_class = "c-up" if score>10 else "c-warn" if score>5 else "c-muted" if score>0 else "c-down"
+            
             # Left column: ranks 1-5, Right column: ranks 6-10
             with cols[0] if i <= 5 else cols[1]:
                 st.markdown(f"""
                 <a href="https://finance.yahoo.com/quote/{ticker}" target="_blank" style="text-decoration: none; color: inherit;">
                     <div class="stock-card" style="cursor: pointer; transition: background-color 0.2s;">
-                      <div class="badge">{ticker[:3].upper()}</div>
-                      <div>
-                        <div style="font-weight:700">{ticker}</div>
-                        <div class="c-muted" style="font-size:12px">{row.get('name', ticker)}</div>
-                        <div style="font-size:12px;margin-top:4px">
-                          <span class="{score_class}">Score {score:.3f}</span> |
-                          <span class="{ 'c-up' if mom>=0 else 'c-down' }">1M {mom:.1f}%</span> |
-                          <span class="c-info">Sharpe {sharpe:.2f}</span>
+                      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                        <div class="badge" style="font-size: 14px; font-weight: 800;">#{i}</div>
+                        <div style="font-weight: 700; font-size: 16px; color: var(--accent);">{ticker}</div>
+                      </div>
+                      <div style="font-weight: 600; font-size: 14px; color: var(--text); margin-bottom: 8px; line-height: 1.3;">
+                        {company_name}
+                      </div>
+                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                        <div>
+                          <div style="font-size: 12px; color: var(--muted);">Rating</div>
+                          <div style="font-weight: 700; font-size: 16px;" class="{score_class}">{score:.1f}</div>
+                        </div>
+                        <div>
+                          <div style="font-size: 12px; color: var(--muted);">1M Growth</div>
+                          <div style="font-weight: 700; font-size: 16px;" class="{'c-up' if momentum_1m>=0 else 'c-down'}">{momentum_1m:+.1f}%</div>
                         </div>
                       </div>
-                      <div class="rank">#{i}</div>
+                      <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                          <div style="font-size: 12px; color: var(--muted);">Sharpe</div>
+                          <div style="font-weight: 600; font-size: 14px;" class="c-info">{sharpe:.2f}</div>
+                        </div>
+                        <div style="text-align: right;">
+                          <div style="font-size: 12px; color: var(--muted);">Price</div>
+                          <div style="font-weight: 700; font-size: 16px;">${row['price']:.2f}</div>
+                        </div>
+                      </div>
                     </div>
                 </a>
                 """, unsafe_allow_html=True)
