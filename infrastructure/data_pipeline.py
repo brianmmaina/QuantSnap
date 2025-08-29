@@ -167,6 +167,9 @@ class DataPipeline:
             # Step 4: Store factors
             if factors_data:
                 factors_df = pd.DataFrame(factors_data)
+                # Ensure date column is properly formatted
+                if 'date' in factors_df.columns:
+                    factors_df['date'] = pd.to_datetime(factors_df['date']).dt.date
                 factors_df = create_composite_reputation_factors(factors_df)
                 self.db.insert_daily_factors(factors_df)
                 
