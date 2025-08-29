@@ -444,14 +444,16 @@ if df is not None and not df.empty:
             
             # Validate stock symbol
             if chart_stock:
-                # Fetch data from yfinance
+                # Fetch data from backend API
                 with st.spinner(f"Fetching data for {chart_stock}..."):
                     try:
-                        import yfinance as yf
-                        ticker_obj = yf.Ticker(chart_stock)
-                        hist = ticker_obj.history(period="1y")
-                        if not hist.empty and len(hist) > 30:
-                            price_series = hist['Close'].dropna()
+                        chart_response = api_request(f"/chart/{chart_stock}?period=1y")
+                        if chart_response and 'data' in chart_response:
+                            # Convert chart data to pandas series for compatibility
+                            chart_data = chart_response['data']
+                            dates = pd.to_datetime([item['date'] for item in chart_data])
+                            prices = [item['price'] for item in chart_data]
+                            price_series = pd.Series(prices, index=dates)
                         else:
                             st.error(f"Could not fetch data for {chart_stock}. Please check the stock symbol.")
                             price_series = None
@@ -562,30 +564,13 @@ if df is not None and not df.empty:
         neon_divider("LIVE STOCK PRICES")
         
         try:
-            import yfinance as yf
-            
-            # Get current prices for top stocks directly from yfinance
+            # Get current prices for top stocks from backend API
             top_stocks_prices = df.head(10).index.tolist()
-            price_data = {}
+            tickers_str = ','.join(top_stocks_prices)
             
-            for ticker in top_stocks_prices:
-                try:
-                    stock = yf.Ticker(ticker)
-                    info = stock.info
-                    
-                    current_price = info.get('regularMarketPrice', 0)
-                    previous_close = info.get('regularMarketPreviousClose', 0)
-                    change = current_price - previous_close if previous_close else 0
-                    change_pct = (change / previous_close * 100) if previous_close else 0
-                    
-                    price_data[ticker] = {
-                        'price': round(current_price, 2),
-                        'change': round(change, 2),
-                        'change_pct': round(change_pct, 2),
-                        'volume': info.get('volume', 0)
-                    }
-                except Exception as e:
-                    continue
+            # Fetch live prices from backend
+            price_response = api_request(f"/prices/live?tickers={tickers_str}")
+            price_data = price_response.get('prices', {})
             
             if price_data:
                 # Display price cards in 2 rows of 5

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Database management for QuantSnap
+Database management for QuantSnap - Real-time yfinance data
 """
 
 import yfinance as yf
@@ -130,6 +130,78 @@ class Database:
                 logger.warning(f"Rate limited for {ticker}, skipping...")
             else:
                 logger.error(f"Error getting stock data for {ticker}: {e}")
+            return None
+    
+    def get_live_prices(self, tickers: List[str]) -> Dict:
+        """Get live prices for multiple stocks from yfinance"""
+        price_data = {}
+        
+        for ticker in tickers:
+            try:
+                time.sleep(0.1)  # Rate limiting
+                stock = yf.Ticker(ticker)
+                info = stock.info
+                
+                current_price = info.get('regularMarketPrice', 0)
+                previous_close = info.get('regularMarketPreviousClose', 0)
+                change = current_price - previous_close if previous_close else 0
+                change_pct = (change / previous_close * 100) if previous_close else 0
+                
+                price_data[ticker] = {
+                    'price': round(current_price, 2),
+                    'change': round(change, 2),
+                    'change_pct': round(change_pct, 2),
+                    'volume': info.get('volume', 0),
+                    'market_cap': info.get('marketCap', 0),
+                    'timestamp': datetime.now().isoformat()
+                }
+            except Exception as e:
+                logger.error(f"Error fetching live price for {ticker}: {e}")
+                continue
+        
+        return price_data
+    
+    def get_chart_data(self, ticker: str, period: str = "1y") -> Optional[Dict]:
+        """Get chart data for a stock from yfinance"""
+        try:
+            time.sleep(0.1)  # Rate limiting
+            stock = yf.Ticker(ticker)
+            hist = stock.history(period=period)
+            
+            if hist.empty:
+                return None
+            
+            # Get company info
+            info = stock.info
+            company_name = info.get('longName', info.get('shortName', ticker))
+            
+            # Calculate current metrics
+            current_price = hist['Close'].iloc[-1]
+            start_price = hist['Close'].iloc[0]
+            change = current_price - start_price
+            change_pct = (change / start_price) * 100
+            
+            # Format chart data
+            chart_data = []
+            for date, row in hist.iterrows():
+                chart_data.append({
+                    'date': date.strftime('%Y-%m-%d'),
+                    'price': round(row['Close'], 2),
+                    'volume': row['Volume']
+                })
+            
+            return {
+                "ticker": ticker,
+                "company_name": company_name,
+                "period": period,
+                "current_price": round(current_price, 2),
+                "change": round(change, 2),
+                "change_pct": round(change_pct, 2),
+                "data": chart_data,
+                "timestamp": datetime.now().isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Error getting chart data for {ticker}: {e}")
             return None
     
     def get_rankings(self, universe_name: str = "world_top_stocks", limit: int = 10) -> List[Dict]:
