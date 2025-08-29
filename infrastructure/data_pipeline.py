@@ -30,7 +30,7 @@ class DataPipeline:
         logger.info(f"Fetching price data for {len(tickers)} tickers")
         
         try:
-            # Fetch data in batches to avoid rate limiting
+            #fetches data in batches to avoid rate limiting
             batch_size = 50
             all_data = {}
             
@@ -38,7 +38,6 @@ class DataPipeline:
                 batch = tickers[i:i + batch_size]
                 logger.info(f"Processing batch {i//batch_size + 1}: {len(batch)} tickers")
                 
-                # Fetch data
                 data = yf.download(
                     batch,
                     period=period,
@@ -48,7 +47,7 @@ class DataPipeline:
                     progress=False
                 )
                 
-                # Handle single ticker case
+                # Handles single ticker case
                 if len(batch) == 1:
                     data.columns = pd.MultiIndex.from_product([[batch[0]], data.columns])
                 
