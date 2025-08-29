@@ -162,7 +162,7 @@ class DataPipeline:
             # Step 3: Store company data
             if companies_data:
                 companies_df = pd.DataFrame(companies_data)
-                self.db.insert_dataframe(companies_df, 'companies', if_exists='replace')
+                self.db.db.insert_dataframe(companies_df, 'companies', if_exists='replace')
             
             # Step 4: Store factors
             if factors_data:
