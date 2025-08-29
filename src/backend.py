@@ -196,10 +196,11 @@ async def get_rankings(
 ):
     """Get rankings for universe"""
     try:
-        db = StockDatabase()
+        from infrastructure.simple_pipeline import SimpleDataPipeline
+        pipeline = SimpleDataPipeline()
         
-        # Get latest rankings
-        rankings = db.get_latest_rankings(universe, limit)
+        # Get latest rankings from CSV
+        rankings = pipeline.get_rankings(universe, limit)
         
         if rankings.empty:
             raise HTTPException(status_code=404, detail=f"No rankings found for universe {universe}")
@@ -305,26 +306,20 @@ async def populate_database():
 # Quick populate endpoint (accurate)
 @app.post("/populate/quick")
 async def quick_populate_database():
-    """Quick populate database with popular stocks using full factor calculations"""
+    """Quick populate database with popular stocks using simplified CSV approach"""
     try:
-        from infrastructure.data_pipeline import DataPipeline
-        
-        pipeline = DataPipeline()
-        
-        # Process popular stocks with full factor calculations
-        logger.info("Processing popular stocks with full accuracy...")
-        pipeline.process_universe('popular_stocks')
-        
+        from infrastructure.simple_pipeline import quick_populate
+        result = quick_populate()
         return {
             "status": "success",
-            "message": "Popular stocks populated with full factor calculations",
+            "message": "Popular stocks processed and saved to CSV files",
             "universe_processed": "popular_stocks",
-            "accuracy": "Full factor calculations including reputation metrics",
-            "timestamp": datetime.now().isoformat()
+            "approach": "Simplified CSV-based pipeline",
+            "timestamp": datetime.now().isoformat(),
+            "result": result
         }
-        
     except Exception as e:
-        logger.error(f"Failed to quick populate database: {e}")
+        logger.error(f"Failed to quick populate: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
