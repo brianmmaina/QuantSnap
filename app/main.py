@@ -164,10 +164,17 @@ class DataStore:
             # Helper function to safely handle NaN values
             def safe_round(value, decimals=2):
                 try:
-                    if pd.isna(value) or value is None:
+                    # Handle None values
+                    if value is None:
                         return 0.0
-                    return round(float(value), decimals)
-                except:
+                    
+                    # Convert to float and check for NaN
+                    float_value = float(value)
+                    if float_value != float_value:  # NaN check (NaN != NaN)
+                        return 0.0
+                    
+                    return round(float_value, decimals)
+                except (ValueError, TypeError, AttributeError):
                     return 0.0
             
             factors = {
