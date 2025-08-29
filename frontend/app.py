@@ -449,7 +449,7 @@ if df is not None and not df.empty:
                         import yfinance as yf
                         ticker_obj = yf.Ticker(chart_stock)
                         hist = ticker_obj.history(period="1y")
-                        if not hist.empty:
+                        if not hist.empty and len(hist) > 30:
                             price_series = hist['Close'].dropna()
                         else:
                             st.error(f"Could not fetch data for {chart_stock}. Please check the stock symbol.")
@@ -561,13 +561,30 @@ if df is not None and not df.empty:
         neon_divider("LIVE STOCK PRICES")
         
         try:
-            # Get current prices for top stocks using backend API
-            top_stocks_prices = df.head(10).index.tolist()
-            tickers_str = ','.join(top_stocks_prices)
+            import yfinance as yf
             
-            # Fetch live prices from backend
-            price_response = api_request(f"/prices/live?tickers={tickers_str}")
-            price_data = price_response.get('prices', {})
+            # Get current prices for top stocks directly from yfinance
+            top_stocks_prices = df.head(10).index.tolist()
+            price_data = {}
+            
+            for ticker in top_stocks_prices:
+                try:
+                    stock = yf.Ticker(ticker)
+                    info = stock.info
+                    
+                    current_price = info.get('regularMarketPrice', 0)
+                    previous_close = info.get('regularMarketPreviousClose', 0)
+                    change = current_price - previous_close if previous_close else 0
+                    change_pct = (change / previous_close * 100) if previous_close else 0
+                    
+                    price_data[ticker] = {
+                        'price': round(current_price, 2),
+                        'change': round(change, 2),
+                        'change_pct': round(change_pct, 2),
+                        'volume': info.get('volume', 0)
+                    }
+                except Exception as e:
+                    continue
             
             if price_data:
                 # Display price cards in 2 rows of 5
