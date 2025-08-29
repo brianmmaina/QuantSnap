@@ -141,45 +141,15 @@ async def get_stock_data(
 ):
     """Get comprehensive stock data"""
     try:
-        db = StockDatabase()
+        from simple_data import get_stock_data_simple
         
-        # Get company info
-        company_query = f"""
-        SELECT ticker, name, sector, industry, market_cap, enterprise_value
-        FROM companies
-        WHERE ticker = '{ticker.upper()}'
-        """
-        company = db.db.read_dataframe(company_query)
+        # Get stock data using simple approach
+        stock_data = get_stock_data_simple(ticker)
         
-        if company.empty:
+        if not stock_data:
             raise HTTPException(status_code=404, detail=f"Stock {ticker} not found")
         
-        result = {"company": company.iloc[0].to_dict()}
-        
-        # Get latest factors if requested
-        if include_factors:
-            factors_query = f"""
-            SELECT * FROM daily_factors
-            WHERE ticker = '{ticker.upper()}'
-            AND date = (SELECT MAX(date) FROM daily_factors WHERE ticker = '{ticker.upper()}')
-            """
-            factors = db.db.read_dataframe(factors_query)
-            if not factors.empty:
-                result["factors"] = factors.iloc[0].to_dict()
-        
-        # Get ranking history if requested
-        if include_rankings:
-            rankings_query = f"""
-            SELECT universe, date, rank, score
-            FROM daily_rankings
-            WHERE ticker = '{ticker.upper()}'
-            AND date >= CURRENT_DATE - INTERVAL '30 days'
-            ORDER BY date DESC
-            """
-            rankings = db.db.read_dataframe(rankings_query)
-            result["rankings"] = rankings.to_dict('records')
-        
-        return result
+        return stock_data
         
     except HTTPException:
         raise
@@ -196,18 +166,17 @@ async def get_rankings(
 ):
     """Get rankings for universe"""
     try:
-        from infrastructure.simple_pipeline import SimpleDataPipeline
-        pipeline = SimpleDataPipeline()
+        from simple_data import get_rankings_simple
         
-        # Get latest rankings from CSV
-        rankings = pipeline.get_rankings(universe, limit)
+        # Get rankings using simple in-memory approach
+        rankings = get_rankings_simple(universe, limit)
         
         if rankings.empty:
             raise HTTPException(status_code=404, detail=f"No rankings found for universe {universe}. Please populate the database first.")
         
         result = {
             "universe": universe,
-            "date": rankings['date'].iloc[0].isoformat() if not rankings.empty else None,
+            "date": datetime.now().isoformat(),
             "count": len(rankings),
             "rankings": rankings.to_dict('records')
         }
@@ -306,15 +275,17 @@ async def populate_database():
 # Quick populate endpoint (accurate)
 @app.post("/populate/quick")
 async def quick_populate_database():
-    """Quick populate database with popular stocks using simplified CSV approach"""
+    """Quick populate popular stocks using simple in-memory approach"""
     try:
-        from infrastructure.simple_pipeline import quick_populate
-        result = quick_populate()
+        from simple_data import populate_universe_simple
+        
+        result = populate_universe_simple("popular_stocks")
+        
         return {
             "status": "success",
-            "message": "Popular stocks processed and saved to CSV files",
+            "message": "Popular stocks processed successfully",
             "universe_processed": "popular_stocks",
-            "approach": "Simplified CSV-based pipeline",
+            "approach": "Simple in-memory processing",
             "timestamp": datetime.now().isoformat(),
             "result": result
         }
