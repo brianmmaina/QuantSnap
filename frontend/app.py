@@ -728,8 +728,8 @@ if df is not None and not df.empty:
                     st.markdown('<div class="section-title">OVERVIEW</div>', unsafe_allow_html=True)
                     
                     score = stock_data.get('score', 0)
-                            growth_1m = stock_data.get('momentum_1m', 0)
-        growth_3m = stock_data.get('momentum_3m', 0)
+                    growth_1m = stock_data.get('momentum_1m', 0)
+                    growth_3m = stock_data.get('momentum_3m', 0)
                     price = stock_data.get('price', 0)
                     
                     # Determine sentiment
@@ -752,8 +752,8 @@ if df is not None and not df.empty:
                     **Key Metrics:**
                     - **Current Price:** ${price:.2f}
                     - **AI Score:** {score:.3f}
-                    - **1-Month Return:** {mom_1m:.1%}
-                    - **3-Month Return:** {mom_3m:.1%}
+                    - **1-Month Stock Growth:** {growth_1m:.1%}
+                    - **3-Month Stock Growth:** {growth_3m:.1%}
                     
                     **Investment Recommendation:** {recommendation}
                     """)
@@ -773,7 +773,7 @@ if df is not None and not df.empty:
                     - **Trend Risk:** {'Low' if growth_3m > 0.1 else 'Medium' if growth_3m > -0.05 else 'High'}
                     - **Overall Risk:** {'Low' if score > 1 else 'Medium' if score > 0.5 else 'High'}
                     
-                    **Market Position:** {'Outperforming' if mom_1m > 0.1 else 'In-line' if mom_1m > -0.05 else 'Underperforming'}
+                    **Market Position:** {'Outperforming' if growth_1m > 0.1 else 'In-line' if growth_1m > -0.05 else 'Underperforming'}
                     """)
                     st.markdown('</div>', unsafe_allow_html=True)
                 
