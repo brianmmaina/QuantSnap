@@ -52,22 +52,19 @@ class Database:
             current_price = hist['Close'].iloc[-1]
             returns = hist['Close'].pct_change().dropna()
             
-            # Calculate accurate momentum (using exact trading days)
+            # Calculate accurate momentum using pandas pct_change
             if len(hist) >= 21:
-                month_ago_price = hist['Close'].iloc[-21]
-                momentum_1m = ((current_price / month_ago_price) - 1) * 100
+                momentum_1m = hist['Close'].pct_change(21).iloc[-1] * 100
             else:
                 momentum_1m = 0
                 
             if len(hist) >= 63:
-                three_months_ago_price = hist['Close'].iloc[-63]
-                momentum_3m = ((current_price / three_months_ago_price) - 1) * 100
+                momentum_3m = hist['Close'].pct_change(63).iloc[-1] * 100
             else:
                 momentum_3m = 0
                 
             if len(hist) >= 126:
-                six_months_ago_price = hist['Close'].iloc[-126]
-                momentum_6m = ((current_price / six_months_ago_price) - 1) * 100
+                momentum_6m = hist['Close'].pct_change(126).iloc[-1] * 100
             else:
                 momentum_6m = 0
             
@@ -93,13 +90,13 @@ class Database:
             sector = info.get('sector', 'Unknown')
             market_cap = info.get('marketCap', 0)
             
-            # Calculate composite score (simplified)
+            # Calculate composite score (adjusted for realistic percentages)
             score = (
-                (momentum_1m * 0.3) +
-                (momentum_3m * 0.3) +
-                (sharpe_ratio * 10) +
-                (volume_avg_20d / 1000000 * 0.1) +
-                (market_cap / 1e12 * 0.1)
+                (momentum_1m * 2.0) +  # 1M momentum (typically -20% to +30%)
+                (momentum_3m * 1.5) +  # 3M momentum (typically -40% to +60%)
+                (sharpe_ratio * 5.0) + # Sharpe ratio (typically 0 to 3)
+                (volume_avg_20d / 1000000 * 0.1) + # Volume factor
+                (market_cap / 1e12 * 0.1) # Market cap factor
             )
             
             return {
