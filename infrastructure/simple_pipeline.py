@@ -127,6 +127,10 @@ class SimpleDataPipeline:
             universe_df = get_universe(universe_name)
             tickers = universe_df['Ticker'].tolist()
             
+            # Remove duplicates and validate tickers
+            tickers = list(set(tickers))  # Remove duplicates
+            tickers = [ticker for ticker in tickers if ticker and len(ticker) <= 5]  # Basic validation
+            
             logger.info(f"Processing {len(tickers)} tickers for {universe_name}")
             
             # Fetch stock data
