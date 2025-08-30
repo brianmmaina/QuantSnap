@@ -372,6 +372,32 @@ class Database:
         """Get list of available universes"""
         return ["world_top_stocks"]
     
+    def get_all_stocks_metadata(self) -> List[Dict]:
+        """Get metadata for all available stocks (similar to basketball scout's approach)"""
+        try:
+            metadata = []
+            for ticker in self.stocks[:100]:  # Limit to top 100 for performance
+                try:
+                    stock = yf.Ticker(ticker)
+                    info = stock.info
+                    
+                    metadata.append({
+                        "ticker": ticker,
+                        "name": info.get('longName', info.get('shortName', ticker)),
+                        "sector": info.get('sector', 'Unknown'),
+                        "industry": info.get('industry', 'Unknown'),
+                        "market_cap": info.get('marketCap', 0),
+                        "country": info.get('country', 'Unknown')
+                    })
+                except Exception as e:
+                    # Skip stocks that fail to load
+                    continue
+            
+            return metadata
+        except Exception as e:
+            logger.error(f"Error getting stocks metadata: {e}")
+            return []
+    
     def update_all_data(self, universe_name: str = "world_top_stocks") -> List[Dict]:
         """Update all stock data (same as get_rankings for direct approach)"""
         return self.get_rankings(universe_name, limit=50)

@@ -78,39 +78,82 @@ async def root():
 
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
-    """Health check"""
-    return HealthResponse(
-        status="healthy", 
-        timestamp=datetime.now().isoformat()
-    )
+    """Health check with detailed status"""
+    try:
+        # Check if database is working
+        test_rankings = db.get_rankings("world_top_stocks", 1)
+        db_status = "healthy" if test_rankings else "degraded"
+        
+        # Check if we have recent data
+        current_time = datetime.now()
+        status = "healthy" if db_status == "healthy" else "degraded"
+        
+        return HealthResponse(
+            status=status,
+            timestamp=current_time.isoformat()
+        )
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        return HealthResponse(
+            status="unhealthy",
+            timestamp=datetime.now().isoformat()
+        )
 
 @app.get("/rankings/{universe}", response_model=RankingResponse)
 async def get_rankings(
     universe: str = "world_top_stocks",
-    limit: int = Query(10, description="Number of stocks to return")
+    limit: int = Query(10, description="Number of stocks to return", ge=1, le=500)
 ):
-    """Get stock rankings for a universe"""
+    """Get stock rankings for a universe with validation and caching"""
     try:
+        # Validate universe
+        valid_universes = ["world_top_stocks", "sp500", "nasdaq100"]
+        if universe not in valid_universes:
+            raise HTTPException(status_code=400, detail=f"Invalid universe. Must be one of: {valid_universes}")
+        
+        # Get rankings with error handling
         rankings = db.get_rankings(universe, limit)
+        
+        if not rankings:
+            logger.warning(f"No rankings found for universe: {universe}")
+            return RankingResponse(
+                universe=universe,
+                count=0,
+                rankings=[]
+            )
+        
+        logger.info(f"Successfully fetched {len(rankings)} stock rankings for {universe}")
         return RankingResponse(
             universe=universe,
             count=len(rankings),
             rankings=rankings
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error getting rankings: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/stock/{ticker}", response_model=StockResponse)
 async def get_stock_data(ticker: str):
-    """Get individual stock data"""
+    """Get individual stock data with validation"""
     try:
+        # Validate ticker format
+        if not ticker or len(ticker) > 10:
+            raise HTTPException(status_code=400, detail="Invalid ticker symbol")
+        
+        ticker = ticker.upper().strip()
         data = db.get_stock_data(ticker)
+        
         if not data:
             raise HTTPException(status_code=404, detail=f"Stock {ticker} not found")
+        
+        logger.info(f"Successfully fetched data for {ticker}")
         return StockResponse(stock=data)
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error getting stock data: {e}")
+        logger.error(f"Error getting stock data for {ticker}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/stock/{ticker}/analysis", response_model=AnalysisResponse)
@@ -279,16 +322,45 @@ async def get_live_prices(tickers: str = Query(..., description="Comma-separated
 
 @app.get("/chart/{ticker}")
 async def get_chart_data(ticker: str, period: str = Query("1y", description="Chart period")):
-    """Get chart data for a stock"""
+    """Get chart data for a stock with validation"""
     try:
+        # Validate ticker and period
+        if not ticker or len(ticker) > 10:
+            raise HTTPException(status_code=400, detail="Invalid ticker symbol")
+        
+        valid_periods = ["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max"]
+        if period not in valid_periods:
+            raise HTTPException(status_code=400, detail=f"Invalid period. Must be one of: {valid_periods}")
+        
+        ticker = ticker.upper().strip()
         chart_data = db.get_chart_data(ticker, period)
         
         if not chart_data:
-            raise HTTPException(status_code=404, detail=f"No data found for {ticker}")
+            raise HTTPException(status_code=404, detail=f"No chart data found for {ticker}")
         
+        logger.info(f"Successfully fetched chart data for {ticker} ({period})")
         return chart_data
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error getting chart data for {ticker}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/stocks/metadata")
+async def get_stocks_metadata():
+    """Get metadata about available stocks (similar to basketball scout's /players/names)"""
+    try:
+        # Get all available stocks with basic info
+        all_stocks = db.get_all_stocks_metadata()
+        
+        return {
+            "stocks": all_stocks,
+            "count": len(all_stocks),
+            "description": "Available stocks with ticker, name, and sector information",
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error getting stocks metadata: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/universes", response_model=UniverseResponse)

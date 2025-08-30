@@ -8,7 +8,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.io as pio
 from datetime import datetime, timedelta
-from typing import Dict
+from typing import Dict, List
 import requests
 import os
 from dotenv import load_dotenv
@@ -50,77 +50,202 @@ pio.templates["bloomberg"] = bloomberg_template
 pio.templates.default = "bloomberg"
 
 # api configuration
-API_BASE_URL = os.getenv('API_BASE_URL', 'https://quantsnap-backend.onrender.com')
+BACKEND_URL = os.getenv('BACKEND_URL', 'https://quantsnap-backend.onrender.com')
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://quantsnap-frontend.onrender.com')
 
-def api_request(endpoint: str, params: Dict = None) -> Dict:
-    """Make API request to backend with retry logic"""
-    import time
+class QuantSnapAPI:
+    """Clean API client for QuantSnap backend"""
     
-    for attempt in range(3):  # Try up to 3 times
+    def __init__(self, base_url: str = None):
+        self.base_url = base_url or BACKEND_URL
+        self.session = requests.Session()
+        self.session.timeout = 30
+    
+    def _make_request(self, endpoint: str, params: Dict = None) -> Dict:
+        """Make API request with proper error handling"""
         try:
-            url = f"{API_BASE_URL}{endpoint}"
-            # Increase timeout for rankings endpoint, shorter for others
-            timeout = 60 if "rankings" in endpoint else 15
-            response = requests.get(url, params=params, timeout=timeout)
+            url = f"{self.base_url}{endpoint}"
+            response = self.session.get(url, params=params)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.Timeout:
-            if attempt < 2:  # Don't show error on first 2 attempts
-                time.sleep(1)  # Wait 1 second before retry
-                continue
-            else:
-                st.error(f"API request timed out for {endpoint}. The backend is taking too long to respond.")
-                return {}
+            st.error(f"Backend timeout: {endpoint}")
+            return {}
+        except requests.exceptions.ConnectionError:
+            st.error(f"Backend connection failed: {endpoint}")
+            return {}
         except Exception as e:
-            if attempt < 2:  # Don't show error on first 2 attempts
-                time.sleep(1)  # Wait 1 second before retry
-                continue
-            else:
-                st.error(f"API request failed for {endpoint}: {str(e)}")
-                return {}
+            st.error(f"API error: {str(e)}")
+            return {}
     
-    return {}
+    def get_rankings(self, universe: str = "world_top_stocks", limit: int = 50) -> List[Dict]:
+        """Get stock rankings from backend"""
+        data = self._make_request(f"/rankings/{universe}", {"limit": limit})
+        return data.get("rankings", []) if data else []
+    
+    def get_stock_data(self, ticker: str) -> Dict:
+        """Get individual stock data from backend"""
+        data = self._make_request(f"/stock/{ticker}")
+        return data.get("stock", {}) if data else {}
+    
+    def get_live_prices(self, tickers: List[str]) -> Dict:
+        """Get live prices for multiple tickers"""
+        tickers_str = ",".join(tickers)
+        data = self._make_request(f"/prices/live", {"tickers": tickers_str})
+        return data.get("prices", {}) if data else {}
+    
+    def health_check(self) -> bool:
+        """Check if backend is healthy"""
+        data = self._make_request("/health")
+        return data.get("status") == "healthy"
+
+# Create global API client
+api_client = QuantSnapAPI()
 
 def get_rankings_from_api(universe: str, limit: int = 50) -> pd.DataFrame:
-    """Get rankings from API"""
+    """Get rankings from API with local fallback"""
     data = api_request(f"/rankings/{universe}", {"limit": limit})
     if data and "rankings" in data:
         return pd.DataFrame(data["rankings"])
     else:
-        # debug: log what we received
-        st.error(f"API request failed or returned invalid data: {data}")
-        return pd.DataFrame()
+        # if api fails, use local fallback data
+        return get_local_fallback_data(limit)
+
+def get_local_fallback_data(limit: int = 50) -> pd.DataFrame:
+    """Generate realistic fallback data when API is down"""
+    import random
+    
+    # popular stocks with realistic data
+    stocks = [
+        ('AAPL', 'Apple Inc.', 9.5, 5.2, 12.5),
+        ('MSFT', 'Microsoft Corp.', 9.2, 4.8, 11.8),
+        ('GOOGL', 'Alphabet Inc.', 8.8, 6.1, 15.2),
+        ('TSLA', 'Tesla Inc.', 7.5, 8.3, 18.7),
+        ('AMZN', 'Amazon.com Inc.', 8.1, 3.9, 9.3),
+        ('NVDA', 'NVIDIA Corp.', 9.0, 7.2, 25.1),
+        ('META', 'Meta Platforms Inc.', 7.8, 4.5, 8.9),
+        ('NFLX', 'Netflix Inc.', 6.5, 2.1, -2.3),
+        ('INTC', 'Intel Corp.', 8.5, 6.8, 14.2),
+        ('AMD', 'Advanced Micro Devices Inc.', 7.2, 5.4, 12.8),
+        ('JPM', 'JPMorgan Chase & Co.', 7.9, 3.2, 8.5),
+        ('V', 'Visa Inc.', 8.3, 4.1, 10.2),
+        ('JNJ', 'Johnson & Johnson', 7.1, 2.8, 6.9),
+        ('PG', 'Procter & Gamble Co.', 6.8, 1.9, 5.4),
+        ('HD', 'Home Depot Inc.', 7.4, 3.5, 7.8),
+        ('DIS', 'Walt Disney Co.', 6.2, 1.5, 4.2),
+        ('PYPL', 'PayPal Holdings Inc.', 6.9, 2.8, 6.1),
+        ('CRM', 'Salesforce Inc.', 7.6, 4.2, 9.8),
+        ('ADBE', 'Adobe Inc.', 8.2, 5.1, 13.4),
+        ('NKE', 'Nike Inc.', 7.3, 3.8, 8.7),
+        ('WMT', 'Walmart Inc.', 6.7, 2.3, 5.9),
+        ('KO', 'Coca-Cola Co.', 6.4, 1.8, 4.8),
+        ('PEP', 'PepsiCo Inc.', 6.6, 2.1, 5.2),
+        ('ABT', 'Abbott Laboratories', 7.7, 3.9, 9.1),
+        ('TMO', 'Thermo Fisher Scientific Inc.', 8.4, 4.7, 11.6),
+        ('AVGO', 'Broadcom Inc.', 8.6, 5.6, 14.8),
+        ('COST', 'Costco Wholesale Corp.', 7.8, 3.4, 8.2),
+        ('ACN', 'Accenture PLC', 8.0, 4.3, 10.5),
+        ('DHR', 'Danaher Corp.', 8.1, 4.6, 11.2),
+        ('LLY', 'Eli Lilly and Co.', 8.7, 6.2, 16.3),
+        ('UNH', 'UnitedHealth Group Inc.', 7.5, 3.1, 7.5),
+        ('MA', 'Mastercard Inc.', 8.9, 4.9, 12.1),
+        ('MRK', 'Merck & Co. Inc.', 7.0, 2.5, 6.3),
+        ('PFE', 'Pfizer Inc.', 6.3, 1.7, 4.5),
+        ('TXN', 'Texas Instruments Inc.', 7.6, 3.7, 8.9),
+        ('HON', 'Honeywell International Inc.', 7.4, 3.0, 7.2),
+        ('QCOM', 'QUALCOMM Inc.', 7.8, 4.4, 10.8),
+        ('LOW', 'Lowe\'s Companies Inc.', 7.1, 2.9, 6.7),
+        ('UPS', 'United Parcel Service Inc.', 6.8, 2.2, 5.6),
+        ('CAT', 'Caterpillar Inc.', 7.3, 3.6, 8.4),
+        ('RTX', 'Raytheon Technologies Corp.', 6.9, 2.7, 6.5),
+        ('SPGI', 'S&P Global Inc.', 8.3, 4.0, 9.9),
+        ('ISRG', 'Intuitive Surgical Inc.', 8.5, 5.8, 15.1),
+        ('GILD', 'Gilead Sciences Inc.', 6.7, 2.4, 5.8),
+        ('AMGN', 'Amgen Inc.', 7.2, 3.3, 7.9),
+        ('ADI', 'Analog Devices Inc.', 7.9, 4.5, 10.9),
+        ('MDLZ', 'Mondelez International Inc.', 6.5, 2.0, 5.1),
+        ('REGN', 'Regeneron Pharmaceuticals Inc.', 8.0, 5.3, 13.8),
+        ('KLAC', 'KLA Corp.', 8.2, 4.8, 11.4),
+        ('PANW', 'Palo Alto Networks Inc.', 8.4, 5.7, 14.5),
+        ('SNPS', 'Synopsys Inc.', 8.6, 5.0, 12.7),
+        ('CDNS', 'Cadence Design Systems Inc.', 8.3, 4.6, 11.1),
+        ('MELI', 'MercadoLibre Inc.', 7.7, 6.5, 18.2),
+        ('ZM', 'Zoom Video Communications Inc.', 6.1, 1.6, 3.8),
+        ('ROKU', 'Roku Inc.', 5.8, 1.2, 2.9),
+        ('SQ', 'Block Inc.', 6.4, 2.6, 6.2),
+        ('SPOT', 'Spotify Technology S.A.', 6.6, 2.8, 6.4),
+        ('UBER', 'Uber Technologies Inc.', 6.9, 3.2, 7.6),
+        ('LYFT', 'Lyft Inc.', 5.5, 1.1, 2.3),
+        ('SNAP', 'Snap Inc.', 5.2, 0.8, 1.7),
+        ('TWTR', 'Twitter Inc.', 5.9, 1.9, 4.1),
+        ('PINS', 'Pinterest Inc.', 6.2, 2.3, 5.3),
+        ('SHOP', 'Shopify Inc.', 7.1, 4.1, 9.6),
+        ('CRWD', 'CrowdStrike Holdings Inc.', 8.1, 5.9, 15.7),
+        ('OKTA', 'Okta Inc.', 7.3, 3.8, 8.6),
+        ('TEAM', 'Atlassian Corp. PLC', 7.8, 4.7, 11.3),
+        ('ZM', 'Zoom Video Communications Inc.', 6.1, 1.6, 3.8),
+        ('DOCU', 'DocuSign Inc.', 6.7, 2.5, 5.9),
+        ('PLTR', 'Palantir Technologies Inc.', 6.8, 3.1, 7.1),
+        ('SNOW', 'Snowflake Inc.', 7.5, 4.3, 10.1),
+        ('DDOG', 'Datadog Inc.', 7.9, 5.2, 13.1),
+        ('NET', 'Cloudflare Inc.', 8.0, 4.9, 12.3),
+        ('ASAN', 'Asana Inc.', 6.3, 2.2, 4.9),
+        ('ZM', 'Zoom Video Communications Inc.', 6.1, 1.6, 3.8),
+    ]
+    
+    # shuffle and take requested limit
+    random.shuffle(stocks)
+    selected_stocks = stocks[:limit]
+    
+    # create dataframe
+    data = {
+        'ticker': [stock[0] for stock in selected_stocks],
+        'name': [stock[1] for stock in selected_stocks],
+        'score': [stock[2] for stock in selected_stocks],
+        'momentum_1m': [stock[3] for stock in selected_stocks],
+        'momentum_3m': [stock[4] for stock in selected_stocks]
+    }
+    
+    return pd.DataFrame(data)
 
 def get_stock_data_from_api(ticker: str) -> Dict:
-    """Get stock data from API"""
-    return api_request(f"/stock/{ticker}")
+    """Get stock data from API with local fallback"""
+    data = api_request(f"/stock/{ticker}")
+    if data:
+        return data
+    else:
+        # fallback to local yfinance data
+        return get_local_stock_data(ticker)
 
-@st.cache_data(ttl=600)
-def fetch_stock_data(symbol: str):
-    """Fetch stock data with caching"""
+def get_local_stock_data(ticker: str) -> Dict:
+    """Get stock data directly from yfinance when API is down"""
     try:
         import yfinance as yf
-        ticker = yf.Ticker(symbol)
-        hist = ticker.history(period="2y", auto_adjust=True)
+        stock = yf.Ticker(ticker)
+        info = stock.info
+        hist = stock.history(period="5d")
         
         if hist.empty:
-            return None, None
+            return {}
         
-        # get company info safely
-        try:
-            info = ticker.fast_info
-            company_name = info.get('longName', info.get('shortName', symbol))
-        except:
-            try:
-                info = ticker.get_info()
-                company_name = info.get('longName', info.get('shortName', symbol))
-            except:
-                company_name = symbol
+        current_price = hist['Close'].iloc[-1]
+        previous_close = info.get('regularMarketPreviousClose', current_price)
+        daily_change = current_price - previous_close
+        daily_change_pct = (daily_change / previous_close) * 100 if previous_close else 0
         
-        return hist, company_name
-        
+        return {
+            'price': round(current_price, 2),
+            'change': round(daily_change, 2),
+            'change_pct': round(daily_change_pct, 2),
+            'volume': int(info.get('volume', 0)),
+            'market_cap': info.get('marketCap', 0),
+            'pe_ratio': info.get('trailingPE', 0),
+            'dividend_yield': info.get('dividendYield', 0) * 100 if info.get('dividendYield') else 0
+        }
     except Exception as e:
-        return None, None
+        return {}
+
+
 
 # news fetching function
 def fetch_news(ticker=None, limit=3):
@@ -653,36 +778,27 @@ if 'chart_period' not in st.session_state:
     st.session_state.chart_period = "3M"
 
 
-# try different request sizes to handle timeout issues
+# load stock rankings with clean api client
 with st.spinner("Loading stock rankings..."):
-    df = None
-    for limit in [50, 100, 200, 500]:
-        try:
-            df = get_rankings_from_api("world_top_stocks", limit)
-            if df is not None and not df.empty:
-                st.sidebar.success(f"Successfully loaded {len(df)} stocks from API (limit={limit})")
-                break
-        except Exception as e:
-            st.sidebar.warning(f"Failed to load {limit} stocks: {str(e)}")
-            continue
+    # first check backend health
+    if not api_client.health_check():
+        st.warning("⚠️ Backend is not responding, using local fallback data")
+        df = get_local_fallback_data(50)
+    else:
+        # try to get data from backend
+        rankings = api_client.get_rankings("world_top_stocks", 50)
+        if rankings:
+            df = pd.DataFrame(rankings)
+            st.sidebar.success(f"✅ Loaded {len(df)} stocks from backend")
+        else:
+            st.warning("⚠️ Backend returned no data, using local fallback")
+            df = get_local_fallback_data(50)
 
-if df is None or df.empty:
-    st.error("❌ Could not load ranking data. The backend may be overloaded or temporarily unavailable.")
-    st.info("💡 Try refreshing the page in a few minutes, or check if the backend service is running.")
-    
-    # provide a minimal fallback with sample data
-    st.warning("⚠️ Showing sample data while backend is unavailable")
-    sample_data = {
-        'ticker': ['AAPL', 'MSFT', 'GOOGL', 'TSLA', 'AMZN', 'NVDA', 'META', 'NFLX', 'INTC', 'AMD'],
-        'score': [9.5, 9.2, 8.8, 7.5, 8.1, 9.0, 7.8, 6.5, 8.5, 7.2],
-        'name': ['Apple Inc.', 'Microsoft Corp.', 'Alphabet Inc.', 'Tesla Inc.', 'Amazon.com Inc.', 
-                'NVIDIA Corp.', 'Meta Platforms Inc.', 'Netflix Inc.', 'Intel Corp.', 'Advanced Micro Devices Inc.'],
-        'momentum_1m': [5.2, 4.8, 6.1, 8.3, 3.9, 7.2, 4.5, 2.1, 6.8, 5.4],
-        'momentum_3m': [12.5, 11.8, 15.2, 18.7, 9.3, 25.1, 8.9, -2.3, 14.2, 12.8]
-    }
-    df = pd.DataFrame(sample_data)
-    df = df.set_index('ticker')
-    st.info("📊 Using sample data for demonstration purposes")
+if df is not None and not df.empty:
+    st.sidebar.success(f"✅ Ready with {len(df)} stocks")
+else:
+    st.error("❌ Failed to load any stock data")
+    st.stop()
 
 if df is not None and not df.empty:
     # show data status
@@ -760,10 +876,16 @@ if df is not None and not df.empty:
         top10 = df.head(10).copy()
         top_tickers = top10.index.tolist()
         
-        # fetch prices and render in the same order; handle missing
-        tickers_str = ','.join(top_tickers)
-        price_response = api_request(f"/prices/live?tickers={tickers_str}")
-        price_data = (price_response or {}).get('prices', {})
+        # fetch prices using clean api client
+        price_data = api_client.get_live_prices(top_tickers)
+        
+        # if api fails, get local data for each ticker
+        if not price_data:
+            price_data = {}
+            for ticker in top_tickers:
+                local_data = get_local_stock_data(ticker)
+                if local_data:
+                    price_data[ticker] = local_data
 
         cols = st.columns(2)
         for i, ticker in enumerate(top_tickers, start=1):
@@ -832,218 +954,141 @@ if df is not None and not df.empty:
         
         neon_divider("MARKET CHARTS")
         
-        # stock search bar for any stock
-        col1, col2 = st.columns([2, 1])
-        with col1:
-            chart_stock = st.text_input(
-                "Enter any stock symbol for chart (e.g., AAPL, TSLA, GOOGL)",
-                value=st.session_state.chart_search,
-                placeholder="AAPL",
-                help="Enter any valid stock symbol to display its price chart",
-                key="chart_input"
-            )
-        
-        # update session state when input changes
-        if chart_stock:
-            chart_stock = chart_stock.upper().strip()
-            if chart_stock != st.session_state.chart_search:
-                st.session_state.chart_search = chart_stock
-        
-        # validate stock symbol and fetch data
-        if chart_stock:
-            # fetch data with caching
-            hist, company_name = fetch_stock_data(chart_stock)
-            
-            if hist is None or hist.empty:
-                st.error(f"Could not fetch data for {chart_stock}. Please check the stock symbol.")
-                st.stop()
-            
-            # determine currency and set y-axis label/ticks
-            currency = None
-            try:
-                import yfinance as yf
-                fi = yf.Ticker(chart_stock).fast_info
-                currency = getattr(fi, "currency", None) or (fi.get("currency") if isinstance(fi, dict) else None)
-            except Exception:
-                pass
-
-            yaxis_label = f"Price ({currency})" if currency else "Price"
-            
-            # sanitize the price series
-            price_series = hist["Close"].dropna()
-            price_series.index = pd.to_datetime(price_series.index).tz_localize(None)
-            price_series = price_series.resample("B").last().ffill()
-            
-            if len(price_series) < 3:
-                st.error("Insufficient data for charting")
-                st.stop()
-            
-            # period selection with stateful control
-            period_options = ["1M", "3M", "6M", "1Y", "MAX"]
-            default_period = st.session_state.get("chart_period", "3M")
-            if default_period not in period_options:
-                default_period = "3M"
-
-            selected_period_key = st.selectbox(
-                "Select Time Period",
-                options=period_options,
-                index=period_options.index(default_period),
-                key="period_selector"
-            )
-            st.session_state.chart_period = selected_period_key
-            
-            # map period to days
-            period_map = {
-                "1M": 21,
-                "3M": 63,
-                "6M": 126,
-                "1Y": 252,
-                "MAX": len(price_series)
-            }
-            
-            selected_period = period_map[selected_period_key]
-            period_name = {
-                "1M": "1 Month",
-                "3M": "3 Months", 
-                "6M": "6 Months",
-                "1Y": "1 Year",
-                "MAX": "Max"
-            }[selected_period_key]
-            
-            # slice data by selected period
-            chart_data = price_series.tail(selected_period)
-            
-            if len(chart_data) < 3:
-                st.error("Insufficient data for selected period")
-                st.stop()
-            
-            # create bloomberg-style price chart
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=chart_data.index,
-                y=chart_data.values,
-                mode='lines',
-                line=dict(
-                    color='#00FF88', 
-                    width=4,
-                    shape='spline'
-                ),
-                name=f'{chart_stock} Price',
-                hovertemplate='<b>%{x}</b><br>Price: $%{y:.2f}<extra></extra>',
-                fill='tonexty',
-                fillcolor='rgba(0, 255, 136, 0.15)',
-                connectgaps=True
-            ))
-            
-            # boost visibility regardless of template
-            fig.update_traces(
-                line=dict(width=3, color="#00E676"),
-                fill="tozeroy",
-                fillcolor="rgba(0,230,118,0.20)",
-                connectgaps=True
-            )
-            fig.update_layout(plot_bgcolor="#0E1317", paper_bgcolor="#0E1317")
-            fig.update_xaxes(type="date", rangebreaks=[dict(bounds=["sat", "mon"])])  # hide weekends
-            
-            # create title with company name if available
-            title_text = f"{chart_stock} Price Chart - {period_name}"
-            if company_name and company_name != chart_stock:
-                title_text = f"{chart_stock} ({company_name}) - {period_name}"
-            
-            fig.update_layout(
-                title=dict(
-                    text=title_text,
-                    font=dict(color='var(--text, #E6EDF3)', size=18, family='JetBrains Mono, Menlo, monospace')
-                ),
-                xaxis_title=dict(
-                    text="Date",
-                    font=dict(color='var(--text, #E6EDF3)', size=14)
-                ),
-                yaxis_title=dict(
-                    text=yaxis_label,
-                    font=dict(color='var(--text, #E6EDF3)', size=14)
-                ),
-                height=400,
-                showlegend=False,
-                hovermode='x unified',
-                plot_bgcolor='#0B0F10',
-                paper_bgcolor='#0B0F10',
-                xaxis=dict(
-                    type="date",
-                    gridcolor='#2A3338',
-                    zerolinecolor='#2A3338',
-                    linecolor='#4A5568',
-                    tickcolor='#4A5568',
-                    tickfont=dict(color='var(--text, #E6EDF3)', size=11),
-                    title=dict(font=dict(color='var(--text, #E6EDF3)', size=12))
-                ),
-                yaxis=dict(
-                    gridcolor='#2A3338',
-                    zerolinecolor='#2A3338',
-                    linecolor='#4A5568',
-                    tickcolor='#4A5568',
-                    tickfont=dict(color='var(--text, #E6EDF3)', size=11),
-                    title=dict(font=dict(color='var(--text, #E6EDF3)', size=12))
-                ),
-                margin=dict(l=50, r=30, t=50, b=50),
-                hoverlabel=dict(
-                    bgcolor='#1A202C',
-                    bordercolor='#4A5568',
-                    font_color='var(--text, #E6EDF3)',
-                    font_size=12
-                )
-            )
-            
-            # add usd tickformat if currency is usd
-            if currency and str(currency).upper() == "USD":
-                fig.update_yaxes(tickformat="$,.2f")
-            
-            st.plotly_chart(fig, use_container_width=True, theme=None)
-            
-            # calculate metrics after chart_data is valid
-            current_price = chart_data.iloc[-1]
-            start_price = chart_data.iloc[0]
-            change = current_price - start_price
-            change_pct = (change / start_price) * 100 if start_price != 0 else 0.0
-            
-            # chart metrics using existing card styling
-            col1, col2, col3, col4 = st.columns(4)
-            
+        # Bloomberg-style Price Chart with Time Period Selection
+        try:
+            # Stock search bar for any stock
+            col1, col2 = st.columns([2, 1])
             with col1:
-                st.markdown(f"""
-                <div class="card" style="text-align: center;">
-                    <div class="c-muted" style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Current Price</div>
-                    <div style="font-size: 24px; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: var(--text, #E6EDF3);">${current_price:.2f}</div>
-                </div>
-                """, unsafe_allow_html=True)
+                chart_stock = st.text_input(
+                    "Enter any stock symbol for chart (e.g., AAPL, TSLA, GOOGL)",
+                    value=st.session_state.chart_search,
+                    placeholder="AAPL",
+                    help="Enter any valid stock symbol to display its price chart",
+                    key="chart_input"
+                )
             
-            with col2:
-                change_color = "var(--up, #00E676)" if change >= 0 else "var(--down, #FF4D4D)"
-                st.markdown(f"""
-                <div class="card" style="text-align: center;">
-                    <div class="c-muted" style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Change</div>
-                    <div style="font-size: 24px; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: {change_color};">${change:+.2f}</div>
-                </div>
-                """, unsafe_allow_html=True)
+            # Update session state when input changes
+            if chart_stock:
+                chart_stock = chart_stock.upper().strip()
+                if chart_stock != st.session_state.chart_search:
+                    st.session_state.chart_search = chart_stock
             
-            with col3:
-                change_color = "var(--up, #00E676)" if change_pct >= 0 else "var(--down, #FF4D4D)"
-                st.markdown(f"""
-                <div class="card" style="text-align: center;">
-                    <div class="c-muted" style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Change %</div>
-                    <div style="font-size: 24px; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: {change_color};">{change_pct:+.2f}%</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col4:
-                st.markdown(f"""
-                <div class="card" style="text-align: center;">
-                    <div class="c-muted" style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Period</div>
-                    <div style="font-size: 24px; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: var(--text, #E6EDF3);">{period_name}</div>
-                </div>
-                """, unsafe_allow_html=True)
-        else:
-            st.markdown('<div class="alert alert-warning">Please enter a stock symbol to view chart</div>', unsafe_allow_html=True)
+            # Validate stock symbol
+            if chart_stock:
+                # Fetch data from yfinance
+                with st.spinner(f"Fetching data for {chart_stock}..."):
+                    try:
+                        import yfinance as yf
+                        ticker_obj = yf.Ticker(chart_stock)
+                        hist = ticker_obj.history(period="1y")
+                        if not hist.empty:
+                            price_series = hist['Close'].dropna()
+                        else:
+                            st.error(f"Could not fetch data for {chart_stock}. Please check the stock symbol.")
+                            price_series = None
+                    except Exception as e:
+                        st.error(f"Could not fetch data for {chart_stock}. Please check the stock symbol.")
+                        price_series = None
+                
+                if price_series is not None and len(price_series) > 30:
+                    # Time period selection
+                    col1, col2, col3, col4, col5 = st.columns(5)
+                    with col1:
+                        period_1m = st.button("1M", key="1m", use_container_width=True)
+                    with col2:
+                        period_3m = st.button("3M", key="3m", use_container_width=True)
+                    with col3:
+                        period_6m = st.button("6M", key="6m", use_container_width=True)
+                    with col4:
+                        period_1y = st.button("1Y", key="1y", use_container_width=True)
+                    with col5:
+                        period_max = st.button("MAX", key="max", use_container_width=True)
+                    
+                    # Determine selected period
+                    if period_1m:
+                        selected_period = 21
+                        period_name = "1 Month"
+                    elif period_3m:
+                        selected_period = 63
+                        period_name = "3 Months"
+                    elif period_6m:
+                        selected_period = 126
+                        period_name = "6 Months"
+                    elif period_1y:
+                        selected_period = 252
+                        period_name = "1 Year"
+                    elif period_max:
+                        selected_period = len(price_series)
+                        period_name = "Max"
+                    else:
+                        selected_period = 63
+                        period_name = "3 Months"
+                    
+                    # Create Bloomberg-style price chart
+                    chart_data = price_series.tail(selected_period)
+                    
+                    fig = go.Figure()
+                    fig.add_trace(go.Scatter(
+                        x=chart_data.index,
+                        y=chart_data.values,
+                        mode='lines',
+                        line=dict(color='#00E676', width=2),
+                        name=f'{chart_stock} Price',
+                        hovertemplate='<b>%{x}</b><br>Price: $%{y:.2f}<extra></extra>'
+                    ))
+                    
+                    # Get company name if available
+                    company_name = ""
+                    try:
+                        if len(df) > 0 and chart_stock in df.index:
+                            company_name = df.loc[chart_stock, 'name'] if 'name' in df.columns else ""
+                        else:
+                            # Try to get company name from yfinance
+                            import yfinance as yf
+                            ticker_obj = yf.Ticker(chart_stock)
+                            info = ticker_obj.info
+                            company_name = info.get('longName', info.get('shortName', ""))
+                    except:
+                        company_name = ""
+                    
+                    # Create title with company name if available
+                    title_text = f"{chart_stock} Price Chart - {period_name}"
+                    if company_name:
+                        title_text = f"{chart_stock} ({company_name}) - {period_name}"
+                    
+                    fig.update_layout(
+                        title=title_text,
+                        xaxis_title="Date",
+                        yaxis_title="Price ($)",
+                        height=400,
+                        showlegend=False,
+                        hovermode='x unified'
+                    )
+                    
+                    st.plotly_chart(fig, use_container_width=True, theme=None)
+                    
+                    # Current price info
+                    current_price = chart_data.iloc[-1]
+                    start_price = chart_data.iloc[0]
+                    change = current_price - start_price
+                    change_pct = (change / start_price) * 100
+                    
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("Current Price", f"${current_price:.2f}")
+                    with col2:
+                        st.metric("Change", f"${change:+.2f}")
+                    with col3:
+                        st.metric("Change %", f"{change_pct:+.2f}%")
+                    with col4:
+                        st.metric("Period", period_name)
+                        
+                else:
+                    st.markdown('<div class="alert alert-warning">Insufficient price data for chart</div>', unsafe_allow_html=True)
+            else:
+                st.markdown('<div class="alert alert-warning">Please enter a stock symbol to view chart</div>', unsafe_allow_html=True)
+        except Exception as e:
+            st.markdown(f'<div class="alert alert-warning">Could not load charts: {str(e)}</div>', unsafe_allow_html=True)
         neon_divider("LIVE STOCK PRICES")
         
         try:
@@ -1051,9 +1096,16 @@ if df is not None and not df.empty:
             top_stocks_prices = df.head(10).index.tolist()
             tickers_str = ','.join(top_stocks_prices)
             
-            # fetch live prices from backend
-            price_response = api_request(f"/prices/live?tickers={tickers_str}")
-            price_data = price_response.get('prices', {})
+            # fetch live prices using clean api client
+            price_data = api_client.get_live_prices(top_stocks_prices)
+            
+            # if api fails, get local data for each ticker
+            if not price_data:
+                price_data = {}
+                for ticker in top_stocks_prices:
+                    local_data = get_local_stock_data(ticker)
+                    if local_data:
+                        price_data[ticker] = local_data
             
             if price_data:
                 # display price cards in 2 rows of 5
@@ -1144,9 +1196,19 @@ if df is not None and not df.empty:
             search_ticker = st.session_state.analysis_search
             
             try:
-                # fetch live data directly from yfinance
-                import yfinance as yf
-                ticker = yf.Ticker(search_ticker)
+                # try backend first, then fallback to yfinance
+                stock_data = api_client.get_stock_data(search_ticker)
+                if stock_data:
+                    # use backend data
+                    current_price = stock_data.get('price', 0)
+                    change_1m = stock_data.get('momentum_1m', 0)
+                    change_3m = stock_data.get('momentum_3m', 0)
+                    company_name = stock_data.get('name', search_ticker)
+                    score_100 = stock_data.get('score', 0) * 10
+                else:
+                    # fallback to yfinance
+                    import yfinance as yf
+                    ticker = yf.Ticker(search_ticker)
                 
                 # get current info and historical data
                 info = ticker.info
