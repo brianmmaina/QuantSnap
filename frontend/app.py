@@ -18,6 +18,14 @@ from dotenv import load_dotenv
 # load environment variables
 load_dotenv()
 
+# streamlit configuration
+st.set_page_config(
+    page_title="QuantSnap - AI Stock Analysis",
+    page_icon="📈",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
 def fetch_news(ticker=None, limit=4):
     """Fetch news using multiple sources with proper cleaning and fallbacks"""
     try:
@@ -651,9 +659,6 @@ with st.spinner("Fetching and analyzing stock data..."):
                 metrics['score'] = calculate_score(metrics)
                 all_metrics[ticker] = metrics
     
-    # debug info
-    st.sidebar.info(f"Processed {len(all_metrics)} stocks successfully")
-    
     if all_metrics:
         # convert to dataframe and sort by score
         df = pd.DataFrame.from_dict(all_metrics, orient='index')
@@ -670,10 +675,6 @@ with st.spinner("Fetching and analyzing stock data..."):
         df = pd.DataFrame()
 
 if df is not None and not df.empty:
-    # show data status
-    st.sidebar.success(f"Data loaded: {len(df)} stocks")
-    st.sidebar.info(f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-    
     # live ticker tape
     ticker_tape(df)
     
@@ -992,8 +993,9 @@ if df is not None and not df.empty:
     </div>
     """, unsafe_allow_html=True)
     
-    # Stock Analysis Form
-    with st.form("stock_analysis_form", clear_on_submit=False):
+    # Stock Analysis Input
+    col1, col2 = st.columns([3, 1])
+    with col1:
         search_ticker = st.text_input(
             "Enter stock symbol (e.g., AAPL, TSLA, GOOGL)", 
             value=st.session_state.analysis_search,
@@ -1001,9 +1003,10 @@ if df is not None and not df.empty:
             label_visibility="collapsed",
             key="analysis_input"
         )
-        search_button = st.form_submit_button("Analyze", type="primary", use_container_width=True)
+    with col2:
+        search_button = st.button("Analyze", type="primary", use_container_width=True)
     
-    # Handle form submission
+    # Handle analysis
     if search_button and search_ticker:
         st.session_state.analysis_search = search_ticker.upper().strip()
         search_ticker = st.session_state.analysis_search
