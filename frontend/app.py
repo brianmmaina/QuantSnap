@@ -13,10 +13,10 @@ import requests
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
+# load environment variables
 load_dotenv()
 
-# Bloomberg Terminal Plotly Template
+# bloomberg terminal plotly template
 bloomberg_template = dict(
     layout=dict(
         paper_bgcolor="#0B0F10",
@@ -49,19 +49,37 @@ bloomberg_template = dict(
 pio.templates["bloomberg"] = bloomberg_template
 pio.templates.default = "bloomberg"
 
-# API Configuration
+# api configuration
 API_BASE_URL = os.getenv('API_BASE_URL', 'https://quantsnap-backend.onrender.com')
 
 def api_request(endpoint: str, params: Dict = None) -> Dict:
-    """Make API request to backend"""
-    try:
-        url = f"{API_BASE_URL}{endpoint}"
-        response = requests.get(url, params=params, timeout=30)
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        st.error(f"API request failed for {endpoint}: {str(e)}")
-        return {}
+    """Make API request to backend with retry logic"""
+    import time
+    
+    for attempt in range(3):  # Try up to 3 times
+        try:
+            url = f"{API_BASE_URL}{endpoint}"
+            # Increase timeout for rankings endpoint, shorter for others
+            timeout = 60 if "rankings" in endpoint else 15
+            response = requests.get(url, params=params, timeout=timeout)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.Timeout:
+            if attempt < 2:  # Don't show error on first 2 attempts
+                time.sleep(1)  # Wait 1 second before retry
+                continue
+            else:
+                st.error(f"API request timed out for {endpoint}. The backend is taking too long to respond.")
+                return {}
+        except Exception as e:
+            if attempt < 2:  # Don't show error on first 2 attempts
+                time.sleep(1)  # Wait 1 second before retry
+                continue
+            else:
+                st.error(f"API request failed for {endpoint}: {str(e)}")
+                return {}
+    
+    return {}
 
 def get_rankings_from_api(universe: str, limit: int = 50) -> pd.DataFrame:
     """Get rankings from API"""
@@ -69,7 +87,7 @@ def get_rankings_from_api(universe: str, limit: int = 50) -> pd.DataFrame:
     if data and "rankings" in data:
         return pd.DataFrame(data["rankings"])
     else:
-        # Debug: log what we received
+        # debug: log what we received
         st.error(f"API request failed or returned invalid data: {data}")
         return pd.DataFrame()
 
@@ -88,7 +106,7 @@ def fetch_stock_data(symbol: str):
         if hist.empty:
             return None, None
         
-        # Get company info safely
+        # get company info safely
         try:
             info = ticker.fast_info
             company_name = info.get('longName', info.get('shortName', symbol))
@@ -104,7 +122,7 @@ def fetch_stock_data(symbol: str):
     except Exception as e:
         return None, None
 
-# News fetching function
+# news fetching function
 def fetch_news(ticker=None, limit=3):
     """Fetch financial news"""
     try:
@@ -141,7 +159,7 @@ def fetch_news(ticker=None, limit=3):
                         description = article.get('description', '').lower()
                         content = f"{title} {description}"
                         
-                        # Enhanced sentiment analysis with comprehensive word lists
+                        # enhanced sentiment analysis with comprehensive word lists
                         positive_words = [
                             'up', 'gain', 'rise', 'positive', 'strong', 'beat', 'surge', 'jump', 'climb', 'soar',
                             'rally', 'boost', 'increase', 'growth', 'profit', 'earnings', 'revenue', 'success',
@@ -165,11 +183,11 @@ def fetch_news(ticker=None, limit=3):
                             'cancel', 'delay', 'postpone', 'suspend', 'halt', 'stop', 'end', 'terminate'
                         ]
                         
-                        # Count positive and negative words
+                        # count positive and negative words
                         positive_count = sum(1 for word in positive_words if word in content)
                         negative_count = sum(1 for word in negative_words if word in content)
                         
-                        # Determine sentiment based on word frequency
+                        # determine sentiment based on word frequency
                         if positive_count > negative_count and positive_count > 0:
                             sentiment = 'positive'
                         elif negative_count > positive_count and negative_count > 0:
@@ -190,7 +208,7 @@ def fetch_news(ticker=None, limit=3):
             except Exception as api_error:
                 pass
         
-        # Fallback news
+        # fallback news
         if ticker:
             news_items = [
                 {
@@ -251,7 +269,7 @@ def fetch_news(ticker=None, limit=3):
     except Exception as e:
         return []
 
-# Page configuration
+# page configuration
 st.set_page_config(
     page_title="QuantSnap - Stock Rankings",
     page_icon="",
@@ -259,7 +277,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Bloomberg Terminal Theme
+# bloomberg terminal theme
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap');
@@ -544,7 +562,7 @@ html, body, [data-testid="stAppViewContainer"]{
 </style>
 """, unsafe_allow_html=True)
 
-# QuantSnap Terminal Banner
+# quantsnap terminal banner
 st.markdown("""
 <div class="title-wrap">
   <div class="title">QUANTSNAP</div>
@@ -552,7 +570,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 st.write("")
 
-# Methodology Section
+# methodology section
 st.markdown("""
 <div class="card" style="margin-bottom: 20px;">
   <div class="section-title">RANKING METHODOLOGY</div>
@@ -595,11 +613,11 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Live Ticker Tape Function
+# live ticker tape function
 def ticker_tape(df):
     items = []
     for t, r in df.head(10).iterrows():
-        # Use 1-month stock price growth for ticker tape (more stable)
+        # use 1-month stock price growth for ticker tape (more stable)
         growth_1m = r.get('momentum_1m', 0)  # This is actually stock price growth percentage
         cls = "c-up" if growth_1m>=0 else "c-down"
         items.append(f"<span class='badge'>{t}</span> <span class='{cls}'>{growth_1m:+.1f}%</span>")
@@ -614,7 +632,7 @@ def ticker_tape(df):
     <div class='tape'><div class='tape-inner'>{html}</div></div>
     """, unsafe_allow_html=True)
 
-# Premium Neon Divider Function
+# premium neon divider function
 def neon_divider(label:str):
     st.markdown(f"""
     <div style="display:flex;align-items:center;gap:12px;margin:22px 0 8px">
@@ -624,7 +642,7 @@ def neon_divider(label:str):
     </div>
     """, unsafe_allow_html=True)
 
-# Initialize session state
+# initialize session state
 if 'selected_ticker' not in st.session_state:
     st.session_state.selected_ticker = None
 if 'chart_search' not in st.session_state:
@@ -635,43 +653,62 @@ if 'chart_period' not in st.session_state:
     st.session_state.chart_period = "3M"
 
 
-df = get_rankings_from_api("world_top_stocks", 500)
+# try different request sizes to handle timeout issues
+with st.spinner("Loading stock rankings..."):
+    df = None
+    for limit in [50, 100, 200, 500]:
+        try:
+            df = get_rankings_from_api("world_top_stocks", limit)
+            if df is not None and not df.empty:
+                st.sidebar.success(f"Successfully loaded {len(df)} stocks from API (limit={limit})")
+                break
+        except Exception as e:
+            st.sidebar.warning(f"Failed to load {limit} stocks: {str(e)}")
+            continue
 
-# Debug: show what we got
-if df is not None and not df.empty:
-    st.sidebar.success(f"Successfully loaded {len(df)} stocks from API")
-else:
-    st.sidebar.error("Failed to load rankings from API")
-    # Try a smaller request as fallback
-    df = get_rankings_from_api("world_top_stocks", 50)
-    if df is not None and not df.empty:
-        st.sidebar.warning(f"Loaded {len(df)} stocks with fallback request")
+if df is None or df.empty:
+    st.error("❌ Could not load ranking data. The backend may be overloaded or temporarily unavailable.")
+    st.info("💡 Try refreshing the page in a few minutes, or check if the backend service is running.")
+    
+    # provide a minimal fallback with sample data
+    st.warning("⚠️ Showing sample data while backend is unavailable")
+    sample_data = {
+        'ticker': ['AAPL', 'MSFT', 'GOOGL', 'TSLA', 'AMZN', 'NVDA', 'META', 'NFLX', 'INTC', 'AMD'],
+        'score': [9.5, 9.2, 8.8, 7.5, 8.1, 9.0, 7.8, 6.5, 8.5, 7.2],
+        'name': ['Apple Inc.', 'Microsoft Corp.', 'Alphabet Inc.', 'Tesla Inc.', 'Amazon.com Inc.', 
+                'NVIDIA Corp.', 'Meta Platforms Inc.', 'Netflix Inc.', 'Intel Corp.', 'Advanced Micro Devices Inc.'],
+        'momentum_1m': [5.2, 4.8, 6.1, 8.3, 3.9, 7.2, 4.5, 2.1, 6.8, 5.4],
+        'momentum_3m': [12.5, 11.8, 15.2, 18.7, 9.3, 25.1, 8.9, -2.3, 14.2, 12.8]
+    }
+    df = pd.DataFrame(sample_data)
+    df = df.set_index('ticker')
+    st.info("📊 Using sample data for demonstration purposes")
 
 if df is not None and not df.empty:
-    # Show data status
+    # show data status
     st.sidebar.success(f"Data loaded: {len(df)} stocks")
     st.sidebar.info(f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
     
-    # Debug: show DataFrame info
+    # debug: show dataframe info
     st.sidebar.info(f"DataFrame columns: {list(df.columns)}")
     st.sidebar.info(f"DataFrame shape: {df.shape}")
     
-    # Normalize tickers to uppercase and strip
+    # normalize tickers to uppercase and strip
     if 'ticker' in df.columns:
         df['ticker'] = df['ticker'].astype(str).str.upper().str.strip()
         df = df.drop_duplicates(subset=['ticker']).set_index('ticker')
         st.sidebar.info(f"After ticker processing: {len(df)} stocks")
 
-    # Coerce score to numeric
+    # coerce score to numeric
     if 'score' in df.columns:
         df['score'] = pd.to_numeric(df['score'], errors='coerce')
         df = df.dropna(subset=['score'])
         st.sidebar.info(f"After score processing: {len(df)} stocks")
         
-        # If scores > 10 then they're 0–100 scale; convert for display only
+        # if scores > 10 then they're 0–100 scale; convert for display only
         score_scale = 10 if df['score'].max() <= 10 else 100
         
-        # If API already returns a rank column, prefer it for ordering
+        # if api already returns a rank column, prefer it for ordering
         if 'rank' in df.columns:
             df['rank'] = pd.to_numeric(df['rank'], errors='coerce')
             df = df.dropna(subset=['rank']).sort_values('rank', ascending=True)
@@ -683,12 +720,12 @@ if df is not None and not df.empty:
         st.stop()
     
     if df is not None and not df.empty:
-        # Live Ticker Tape
+        # live ticker tape
         ticker_tape(df)
         
         st.write("")
         
-        # Bloomberg Terminal KPI Cards
+        # bloomberg terminal kpi cards
         c1, c2, c3, c4 = st.columns(4)
         c1.markdown(f"""
         <div class="card">
@@ -719,20 +756,20 @@ if df is not None and not df.empty:
         
         neon_divider("TOP PERFORMERS")
         
-        # Select the actual top-10 in that order
+        # select the actual top-10 in that order
         top10 = df.head(10).copy()
         top_tickers = top10.index.tolist()
         
-        # Fetch prices and render in the same order; handle missing
+        # fetch prices and render in the same order; handle missing
         tickers_str = ','.join(top_tickers)
         price_response = api_request(f"/prices/live?tickers={tickers_str}")
         price_data = (price_response or {}).get('prices', {})
 
         cols = st.columns(2)
         for i, ticker in enumerate(top_tickers, start=1):
-            data = price_data.get(ticker)  # may be None
+            data = price_data.get(ticker)  # may be none
             score = top10.loc[ticker, 'score']
-            # Display score on 0–10 scale consistently
+            # display score on 0–10 scale consistently
             score_10 = score if score_scale == 10 else round(min(score/10, 10), 1)
 
             score_class = ("c-up" if score_10 > 7 else
@@ -744,7 +781,7 @@ if df is not None and not df.empty:
 
             with cols[0] if i <= 5 else cols[1]:
                 if not data:
-                    # Graceful fallback card when live price missing
+                    # graceful fallback card when live price missing
                     st.markdown(f"""
                     <div class="stock-card" style="margin-bottom:16px;">
                       <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
@@ -795,7 +832,7 @@ if df is not None and not df.empty:
         
         neon_divider("MARKET CHARTS")
         
-        # Stock search bar for any stock
+        # stock search bar for any stock
         col1, col2 = st.columns([2, 1])
         with col1:
             chart_stock = st.text_input(
@@ -806,22 +843,22 @@ if df is not None and not df.empty:
                 key="chart_input"
             )
         
-        # Update session state when input changes
+        # update session state when input changes
         if chart_stock:
             chart_stock = chart_stock.upper().strip()
             if chart_stock != st.session_state.chart_search:
                 st.session_state.chart_search = chart_stock
         
-        # Validate stock symbol and fetch data
+        # validate stock symbol and fetch data
         if chart_stock:
-            # Fetch data with caching
+            # fetch data with caching
             hist, company_name = fetch_stock_data(chart_stock)
             
             if hist is None or hist.empty:
                 st.error(f"Could not fetch data for {chart_stock}. Please check the stock symbol.")
                 st.stop()
             
-            # Determine currency and set y-axis label/ticks
+            # determine currency and set y-axis label/ticks
             currency = None
             try:
                 import yfinance as yf
@@ -832,7 +869,7 @@ if df is not None and not df.empty:
 
             yaxis_label = f"Price ({currency})" if currency else "Price"
             
-            # Sanitize the price series
+            # sanitize the price series
             price_series = hist["Close"].dropna()
             price_series.index = pd.to_datetime(price_series.index).tz_localize(None)
             price_series = price_series.resample("B").last().ffill()
@@ -841,7 +878,7 @@ if df is not None and not df.empty:
                 st.error("Insufficient data for charting")
                 st.stop()
             
-            # Period selection with stateful control
+            # period selection with stateful control
             period_options = ["1M", "3M", "6M", "1Y", "MAX"]
             default_period = st.session_state.get("chart_period", "3M")
             if default_period not in period_options:
@@ -855,7 +892,7 @@ if df is not None and not df.empty:
             )
             st.session_state.chart_period = selected_period_key
             
-            # Map period to days
+            # map period to days
             period_map = {
                 "1M": 21,
                 "3M": 63,
@@ -873,14 +910,14 @@ if df is not None and not df.empty:
                 "MAX": "Max"
             }[selected_period_key]
             
-            # Slice data by selected period
+            # slice data by selected period
             chart_data = price_series.tail(selected_period)
             
             if len(chart_data) < 3:
                 st.error("Insufficient data for selected period")
                 st.stop()
             
-            # Create Bloomberg-style price chart
+            # create bloomberg-style price chart
             fig = go.Figure()
             fig.add_trace(go.Scatter(
                 x=chart_data.index,
@@ -898,7 +935,7 @@ if df is not None and not df.empty:
                 connectgaps=True
             ))
             
-            # Boost visibility regardless of template
+            # boost visibility regardless of template
             fig.update_traces(
                 line=dict(width=3, color="#00E676"),
                 fill="tozeroy",
@@ -908,7 +945,7 @@ if df is not None and not df.empty:
             fig.update_layout(plot_bgcolor="#0E1317", paper_bgcolor="#0E1317")
             fig.update_xaxes(type="date", rangebreaks=[dict(bounds=["sat", "mon"])])  # hide weekends
             
-            # Create title with company name if available
+            # create title with company name if available
             title_text = f"{chart_stock} Price Chart - {period_name}"
             if company_name and company_name != chart_stock:
                 title_text = f"{chart_stock} ({company_name}) - {period_name}"
@@ -957,19 +994,19 @@ if df is not None and not df.empty:
                 )
             )
             
-            # Add USD tickformat if currency is USD
+            # add usd tickformat if currency is usd
             if currency and str(currency).upper() == "USD":
                 fig.update_yaxes(tickformat="$,.2f")
             
             st.plotly_chart(fig, use_container_width=True, theme=None)
             
-            # Calculate metrics after chart_data is valid
+            # calculate metrics after chart_data is valid
             current_price = chart_data.iloc[-1]
             start_price = chart_data.iloc[0]
             change = current_price - start_price
             change_pct = (change / start_price) * 100 if start_price != 0 else 0.0
             
-            # Chart metrics using existing card styling
+            # chart metrics using existing card styling
             col1, col2, col3, col4 = st.columns(4)
             
             with col1:
@@ -1010,19 +1047,19 @@ if df is not None and not df.empty:
         neon_divider("LIVE STOCK PRICES")
         
         try:
-            # Get current prices for top stocks from backend API
+            # get current prices for top stocks from backend api
             top_stocks_prices = df.head(10).index.tolist()
             tickers_str = ','.join(top_stocks_prices)
             
-            # Fetch live prices from backend
+            # fetch live prices from backend
             price_response = api_request(f"/prices/live?tickers={tickers_str}")
             price_data = price_response.get('prices', {})
             
             if price_data:
-                # Display price cards in 2 rows of 5
+                # display price cards in 2 rows of 5
                 price_items = list(price_data.items())
                 
-                # First row (5 stocks)
+                # first row (5 stocks)
                 row1_cols = st.columns(5)
                 for i, (ticker, data) in enumerate(price_items[:5]):
                     with row1_cols[i]:
@@ -1042,11 +1079,11 @@ if df is not None and not df.empty:
                         </a>
                         """, unsafe_allow_html=True)
                 
-                # Add spacing between rows
+                # add spacing between rows
                 st.write("")
                 st.write("")
                 
-                # Second row (remaining stocks, up to 5)
+                # second row (remaining stocks, up to 5)
                 if len(price_items) > 5:
                     row2_cols = st.columns(5)
                     for i, (ticker, data) in enumerate(price_items[5:10]):
@@ -1074,7 +1111,7 @@ if df is not None and not df.empty:
         
         neon_divider("STOCK ANALYSIS")
         
-        # AI Status
+        # ai status
         ai_status = "AI Online" if os.getenv('GEMINI_API_KEY') else "AI Offline"
         pulse_color = "var(--up)" if os.getenv('GEMINI_API_KEY') else "var(--warn)"
         st.markdown(f"""
@@ -1090,7 +1127,7 @@ if df is not None and not df.empty:
         </div>
         """, unsafe_allow_html=True)
         
-        # Stock Analysis Form
+        # stock analysis form
         with st.form("stock_analysis_form", clear_on_submit=False):
             search_ticker = st.text_input(
                 "Enter stock symbol (e.g., AAPL, TSLA, GOOGL)", 
@@ -1101,46 +1138,46 @@ if df is not None and not df.empty:
             )
             search_button = st.form_submit_button("Analyze", type="primary", use_container_width=True)
         
-        # Handle form submission
+        # handle form submission
         if search_button and search_ticker:
             st.session_state.analysis_search = search_ticker.upper().strip()
             search_ticker = st.session_state.analysis_search
             
             try:
-                # Fetch live data directly from yfinance
+                # fetch live data directly from yfinance
                 import yfinance as yf
                 ticker = yf.Ticker(search_ticker)
                 
-                # Get current info and historical data
+                # get current info and historical data
                 info = ticker.info
                 hist = ticker.history(period="3mo", auto_adjust=True)
                 
                 if hist.empty or len(hist) < 20:
                     st.error(f"Could not fetch data for {search_ticker}. Please check the stock symbol.")
                 else:
-                    # Calculate metrics
+                    # calculate metrics
                     current_price = hist['Close'].iloc[-1]
                     month_ago_price = hist['Close'].iloc[-21] if len(hist) >= 21 else hist['Close'].iloc[0]
                     three_month_ago_price = hist['Close'].iloc[0]
                     
-                    # Calculate percentage changes
+                    # calculate percentage changes
                     change_1m = ((current_price / month_ago_price) - 1) * 100
                     change_3m = ((current_price / three_month_ago_price) - 1) * 100
                     
-                    # Get daily change
+                    # get daily change
                     previous_close = info.get('regularMarketPreviousClose', current_price)
                     daily_change = current_price - previous_close
                     daily_change_pct = (daily_change / previous_close) * 100 if previous_close else 0
                     
-                    # Get company name
+                    # get company name
                     company_name = info.get('longName', info.get('shortName', search_ticker))
                     
-                    # Calculate a simple score based on performance
+                    # calculate a simple score based on performance
                     # This is a simplified version of your AI scoring
                     volatility = hist['Close'].pct_change().std() * 100
                     volume_avg = hist['Volume'].mean()
                     
-                    # Simple scoring algorithm
+                    # simple scoring algorithm
                     score = (
                         (change_1m * 0.4) +  # 40% weight on 1M performance
                         (change_3m * 0.3) +  # 30% weight on 3M performance
@@ -1148,10 +1185,10 @@ if df is not None and not df.empty:
                         (volume_avg / 1000000 * 0.1)  # 10% weight on volume
                     )
                     
-                    # Scale score to 0-100
+                    # scale score to 0-100
                     score_100 = min(max(score * 10, 0), 100)
                     
-                    # Determine sentiment and recommendation
+                    # determine sentiment and recommendation
                     if score_100 > 80:
                         sentiment = "very bullish"
                         recommendation = "Strong Buy"
@@ -1168,7 +1205,7 @@ if df is not None and not df.empty:
                         sentiment = "very bearish"
                         recommendation = "Strong Sell"
                     
-                    # Display analysis in organized layout
+                    # display analysis in organized layout
                     left, right = st.columns(2, gap="large")
                     
                     with left:
@@ -1193,7 +1230,7 @@ if df is not None and not df.empty:
                         st.markdown('<div class="analysis-section">', unsafe_allow_html=True)
                         st.markdown('<div class="section-title">PERFORMANCE</div>', unsafe_allow_html=True)
                         
-                        # Risk assessment
+                        # risk assessment
                         growth_risk = "Low" if change_1m > 5 else "Medium" if change_1m > -5 else "High"
                         trend_risk = "Low" if change_3m > 10 else "Medium" if change_3m > -5 else "High"
                         overall_risk = "Low" if score_100 > 60 else "Medium" if score_100 > 30 else "High"
@@ -1217,7 +1254,7 @@ if df is not None and not df.empty:
                         """)
                         st.markdown('</div>', unsafe_allow_html=True)
                     
-                    # AI Analysis section (simplified)
+                    # ai analysis section (simplified)
                     if os.getenv('GEMINI_API_KEY'):
                         st.markdown(f'<div class="section-title">AI ANALYSIS</div>', unsafe_allow_html=True)
                         st.markdown(f"""
@@ -1240,10 +1277,10 @@ if df is not None and not df.empty:
             except Exception as e:
                 st.error(f"Error analyzing {search_ticker}: {str(e)}")
                 
-                # Stock-specific news section
+                # stock-specific news section
                 st.markdown(f'<div class="section-title">{search_ticker} NEWS</div>', unsafe_allow_html=True)
                 
-                # Fetch news for the analyzed stock
+                # fetch news for the analyzed stock
                 stock_news = fetch_news(ticker=search_ticker, limit=3)
                 
                 if stock_news:
@@ -1271,17 +1308,17 @@ if df is not None and not df.empty:
         
 
         
-        # News Section
+        # news section
         neon_divider("MARKET NEWS")
         
-        # Display news section
+        # display news section
         col1, col2 = st.columns([2, 1])
         
         with col1:
             st.markdown('<div class="analysis-section">', unsafe_allow_html=True)
             st.markdown('<div class="section-title">MARKET NEWS</div>', unsafe_allow_html=True)
             
-            # Get general market news
+            # get general market news
             market_news = fetch_news(limit=3)
             
             for i, news in enumerate(market_news, 1):
@@ -1310,10 +1347,10 @@ if df is not None and not df.empty:
             st.markdown('<div class="analysis-section">', unsafe_allow_html=True)
             st.markdown('<div class="section-title">TOP STOCK NEWS</div>', unsafe_allow_html=True)
             
-            # Get news for top 4 stocks
+            # get news for top 4 stocks
             top_stocks = df.head(4).index.tolist() if df is not None and not df.empty else ['AAPL', 'TSLA', 'GOOGL', 'MSFT']
             
-            for ticker in top_stocks[:4]:  # Show news for top 4 stocks
+            for ticker in top_stocks[:4]:  # show news for top 4 stocks
                 stock_news = fetch_news(ticker=ticker, limit=1)
                 if stock_news:
                     news = stock_news[0]
@@ -1335,7 +1372,7 @@ if df is not None and not df.empty:
             
             st.markdown('</div>', unsafe_allow_html=True)
         
-        # Footer
+        # footer
         st.markdown("""
         <div class="footer">
             QuantSnap • Built with Streamlit • Data from Yahoo Finance<br>
