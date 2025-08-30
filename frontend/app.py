@@ -625,6 +625,16 @@ def fetch_stock_data(ticker, period="1y"):
     except Exception as e:
         return None
 
+def fetch_stock_data_simple(ticker, period="1y"):
+    """Simple version without timeout for debugging"""
+    try:
+        stock = yf.Ticker(ticker)
+        data = stock.history(period=period, auto_adjust=True)
+        data.name = ticker
+        return data
+    except Exception as e:
+        return None
+
 def get_stock_info(ticker):
     """Get basic stock information"""
     try:
@@ -679,16 +689,35 @@ try:
     try:
         with st.spinner("Fetching live data..."):
             all_metrics = {}
+            debug_info = []
+            
             for ticker in ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA']:  # just top 5 for speed
-                data = fetch_stock_data(ticker, "1mo")  # shorter period
-                if data is not None and not data.empty and len(data) > 10:
-                    metrics = calculate_metrics(data)
-                    if metrics:
-                        metrics['ticker'] = ticker
-                        metrics['score'] = calculate_score(metrics)
-                        all_metrics[ticker] = metrics
+                try:
+                    debug_info.append(f"Fetching {ticker}...")
+                    data = fetch_stock_data_simple(ticker, "1mo")  # use simple version for debugging
+                    
+                    if data is not None and not data.empty and len(data) > 10:
+                        debug_info.append(f"✓ {ticker}: Got {len(data)} rows")
+                        metrics = calculate_metrics(data)
+                        if metrics:
+                            metrics['ticker'] = ticker
+                            metrics['score'] = calculate_score(metrics)
+                            all_metrics[ticker] = metrics
+                            debug_info.append(f"✓ {ticker}: Calculated score {metrics['score']:.2f}")
+                        else:
+                            debug_info.append(f"✗ {ticker}: Metrics calculation failed")
+                    else:
+                        debug_info.append(f"✗ {ticker}: No data or insufficient data")
+                except Exception as e:
+                    debug_info.append(f"✗ {ticker}: Error - {str(e)}")
+            
+            # show debug info
+            st.sidebar.info("Debug Info:")
+            for info in debug_info:
+                st.sidebar.text(info)
             
             if all_metrics:
+                st.sidebar.success(f"Successfully loaded {len(all_metrics)} stocks")
                 # update with real data
                 real_df = pd.DataFrame.from_dict(all_metrics, orient='index')
                 real_df = real_df.sort_values('score', ascending=False)
@@ -698,8 +727,14 @@ try:
                 for ticker in real_df.index:
                     if ticker in df.index:
                         df.loc[ticker] = real_df.loc[ticker]
-                        df.loc[ticker, 'name'] = get_stock_info(ticker).get('name', ticker)
-    except:
+                        try:
+                            df.loc[ticker, 'name'] = get_stock_info(ticker).get('name', ticker)
+                        except:
+                            df.loc[ticker, 'name'] = ticker
+            else:
+                st.sidebar.warning("No real data loaded, using sample data")
+    except Exception as e:
+        st.sidebar.error(f"Background data fetch failed: {str(e)}")
         pass  # keep using sample data if real data fails
     
 except Exception as e:
