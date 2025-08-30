@@ -563,11 +563,11 @@ def calculate_metrics(ticker_data):
         return None
 
 def calculate_score(metrics):
-    """Calculate composite score using 67/33 weighting"""
+    """Calculate composite score using 80/20 weighting"""
     if not metrics:
         return 0
     
-    # traditional factors (67% weight)
+    # traditional factors (80% weight)
     pct_change_1m = metrics.get('pct_change_1m', 0)
     pct_change_3m = metrics.get('pct_change_3m', 0)
     sharpe_ratio = metrics.get('sharpe_ratio', 0)
@@ -581,24 +581,24 @@ def calculate_score(metrics):
     elif pct_change_1m < 2:
         pct_change_1m *= 0.7  # 30% penalty
     
-    # traditional score (67%)
+    # traditional score (80%)
     traditional_score = (
         (pct_change_1m * 0.4) +      # 40% of traditional
         (pct_change_3m * 0.25) +     # 25% of traditional
         (sharpe_ratio * 0.15) +      # 15% of traditional
         (volume_factor * 0.1) +      # 10% of traditional
         (volume_factor * 0.1)        # 10% market cap factor (using volume as proxy)
-    ) * 0.67
+    ) * 0.80
     
-    # reputation factors (33%) - simplified for now
+    # quality factors (20%) - simplified for now
     # using volatility as a quality indicator
     volatility = metrics.get('volatility', 0)
     volatility_score = max(0, 10 - volatility)  # lower volatility = higher score
     
-    reputation_score = volatility_score * 0.33
+    quality_score = volatility_score * 0.20
     
     # final score (0-10 scale)
-    final_score = max(0, min(10, traditional_score + reputation_score))
+    final_score = max(0, min(10, traditional_score + quality_score))
     
     return final_score
 
@@ -943,7 +943,7 @@ if df is not None and not df.empty:
     except Exception as e:
         st.markdown(f'<div class="alert alert-warning">Could not load charts: {str(e)}</div>', unsafe_allow_html=True)
     
-    neon_divider("LIVE STOCK PRICES")
+    neon_divider("TOP PERFORMERS - MONTHLY CHANGE")
     
     try:
         # Display live prices for top 10 stocks
@@ -953,20 +953,22 @@ if df is not None and not df.empty:
             try:
                 stock = yf.Ticker(ticker)
                 info = stock.info
-                hist = stock.history(period="5d")
+                # Get 1 month of data for monthly change calculation
+                hist = stock.history(period="1mo")
                 
-                if not hist.empty:
+                if not hist.empty and len(hist) >= 2:
                     current_price = hist['Close'].iloc[-1]
-                    prev_price = hist['Close'].iloc[-2]
-                    change = current_price - prev_price
-                    change_pct = (change / prev_price) * 100
+                    # Get price from 1 month ago (approximately 21 trading days)
+                    month_ago_price = hist['Close'].iloc[0] if len(hist) >= 21 else hist['Close'].iloc[0]
+                    monthly_change = current_price - month_ago_price
+                    monthly_change_pct = (monthly_change / month_ago_price) * 100
                     volume = info.get('volume', 0)
                     
                     price_items.append({
                         'ticker': ticker,
                         'price': current_price,
-                        'change': change,
-                        'change_pct': change_pct,
+                        'change': monthly_change,
+                        'change_pct': monthly_change_pct,
                         'volume': volume
                     })
             except:
@@ -985,7 +987,7 @@ if df is not None and not df.empty:
                           <div style="font-weight:700;font-size:16px">{data['ticker']}</div>
                           <div style="font-size:24px;font-weight:800;margin:8px 0">${data['price']:.2f}</div>
                           <div class="{change_class}" style="font-size:14px;font-weight:600">
-                            {data['change']:+.2f} ({data['change_pct']:+.2f}%)
+                            {data['change']:+.2f} ({data['change_pct']:+.2f}% MTD)
                           </div>
                           <div class="c-muted" style="font-size:12px;margin-top:4px">
                             Vol: {data['volume']:,}
@@ -1010,7 +1012,7 @@ if df is not None and not df.empty:
                               <div style="font-weight:700;font-size:16px">{data['ticker']}</div>
                               <div style="font-size:24px;font-weight:800;margin:8px 0">${data['price']:.2f}</div>
                               <div class="{change_class}" style="font-size:14px;font-weight:600">
-                                {data['change']:+.2f} ({data['change_pct']:+.2f}%)
+                                {data['change']:+.2f} ({data['change_pct']:+.2f}% MTD)
                               </div>
                               <div class="c-muted" style="font-size:12px;margin-top:4px">
                                 Vol: {data['volume']:,}
@@ -1320,7 +1322,7 @@ if df is not None and not df.empty:
     
     with col1:
         st.markdown("""
-        <h5 style="color: var(--text); margin-bottom: 8px;">Traditional Factors (67% Weight)</h5>
+                        <h5 style="color: var(--text); margin-bottom: 8px;">Traditional Factors (80% Weight)</h5>
         <ul style="color: var(--text); line-height: 1.5; font-size: 14px;">
             <li><strong>1-Month Growth (40%):</strong> Recent price performance over 30 calendar days</li>
             <li><strong>3-Month Growth (25%):</strong> Medium-term price performance over 90 calendar days</li>
@@ -1332,7 +1334,7 @@ if df is not None and not df.empty:
     
     with col2:
         st.markdown("""
-        <h5 style="color: var(--text); margin-bottom: 8px;">Quality Factors (33% Weight)</h5>
+                        <h5 style="color: var(--text); margin-bottom: 8px;">Quality Factors (20% Weight)</h5>
         <ul style="color: var(--text); line-height: 1.5; font-size: 14px;">
             <li><strong>Volatility Quality:</strong> Lower volatility = higher quality score</li>
             <li><strong>Consistency:</strong> Stable performance patterns</li>

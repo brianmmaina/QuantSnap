@@ -4,18 +4,18 @@ A professional stock analysis application built with Streamlit and yfinance, fea
 
 ## Overview
 
-QuantSnap provides comprehensive stock analysis using a proprietary scoring algorithm that evaluates stocks based on traditional financial metrics and quality factors. The application analyzes 500+ stocks and ranks the top performers using real-time data from Yahoo Finance.
+QuantSnap provides comprehensive stock analysis using a proprietary scoring algorithm that evaluates stocks based on traditional financial metrics and quality factors. The application analyzes 300+ stocks and ranks the top performers using real-time data from Yahoo Finance with an 80/20 weighting favoring traditional performance factors.
 
 ## Live Demo
 
-**[Try QuantSnap Live](https://quantsnap.streamlit.app)**
+o **[Try QuantSnap Live](https://quantsnap.streamlit.app)**
 
 Experience the full application with real-time data and analysis.
 
 ## Features
 
 - **Real-Time Stock Data**: Direct integration with Yahoo Finance API
-- **Quantitative Analysis**: Proprietary 67/33 weighted scoring algorithm
+- **Quantitative Analysis**: Proprietary 80/20 weighted scoring algorithm
 - **Interactive Charts**: Plotly charts with multiple time periods
 - **Live Market Data**: Real-time price tracking and performance metrics
 - **Stock Rankings**: Top 10 ranked stocks based on comprehensive analysis
@@ -73,14 +73,14 @@ The application will be available at `http://localhost:8501`
 
 ## Scoring Algorithm
 
-### Traditional Factors (67% Weight)
+### Traditional Factors (80% Weight)
 - **1-Month Stock Price Growth** (40%): Recent price performance over 30 calendar days
 - **3-Month Stock Price Growth** (25%): Medium-term price performance over 90 calendar days
 - **Sharpe Ratio** (15%): Risk-adjusted returns relative to volatility
 - **Volume Factor** (10%): Trading activity and liquidity
 - **Market Cap Factor** (10%): Company size and stability
 
-### Quality Factors (33% Weight)
+### Quality Factors (20% Weight)
 - **Volatility Quality**: Lower volatility receives higher quality scores
 - **Consistency**: Stable performance patterns are rewarded
 - **Risk Management**: Balanced risk-return profiles are preferred
@@ -93,7 +93,7 @@ Stocks with poor recent performance receive penalties to ensure quality:
 
 ## Stock Universe
 
-The application analyzes approximately 500 stocks including:
+The application analyzes approximately 300+ stocks including:
 - **S&P 500 components**: Large-cap US stocks
 - **Technology leaders**: AAPL, MSFT, GOOGL, AMZN, TSLA, META, NVDA
 - **Financial sector**: JPM, BAC, WFC, GS, MS
