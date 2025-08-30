@@ -1,384 +1,229 @@
-# QuantSnap - Professional Stock Rankings
+# 📈 QuantSnap - AI-Powered Stock Analysis
 
-A professional quantitative stock ranking application with dark terminal-style UI. Built with Python, FastAPI, and Streamlit featuring real-time data, AI analysis, and a comprehensive multi-factor scoring model.
+A modern, streamlined stock analysis application built with Streamlit and yfinance, featuring AI-powered insights and real-time market data.
 
-## Features
+## 🎯 Features
 
-### **Core Functionality**
-- **Multi-Factor Quantitative Model**: Stock Price Growth (1M, 3M), Volatility (30d), Sharpe Ratio (3M), Volume Factor, Market Cap, P/E Ratio
-- **World's Top 500+ Stocks**: Comprehensive database including US mega-caps, international stocks, and emerging markets
-- **Real-Time Data**: Daily updates using Yahoo Finance API with optimized accuracy
-- **Professional Dark Terminal UI**: Dark theme with neon green accents and professional typography
+- **Real-Time Stock Data**: Direct integration with Yahoo Finance API
+- **AI-Powered Analysis**: Google Gemini integration for intelligent stock insights
+- **Interactive Charts**: Beautiful Plotly charts with dark theme
+- **67/33 Scoring Algorithm**: Proprietary quantitative and qualitative factor analysis
+- **Live Stock Prices**: Real-time price tracking and performance metrics
+- **Top Performers**: Ranked stock recommendations based on comprehensive analysis
 
-### **AI-Powered Analysis**
-- **Google Gemini AI Integration**: Intelligent stock analysis and recommendations
-- **Risk Assessment**: AI-powered risk evaluation and investment recommendations
-- **Quota Management**: Optimized API usage with free tier limits (45 requests/day buffer)
-- **Fallback Analysis**: Works even without API key using quantitative factors
-- **Sentiment Analysis**: AI-powered news sentiment classification
-- **Natural Language Processing**: AI-generated investment insights and recommendations
+## 🏗️ Architecture
 
-### **Real-Time News Integration**
-- **Market News**: Latest financial and business headlines
-- **Stock-Specific News**: Relevant news for individual stocks (top 4 stocks)
-- **Sentiment Analysis**: Color-coded news sentiment (positive/negative/neutral)
-- **NewsAPI Integration**: Real-time news when API key is provided
-- **Clickable News**: Direct links to external news sources
+### Simplified Design
+- **Frontend**: Streamlit app with direct yfinance integration
+- **Backend**: Lightweight FastAPI service for AI analysis only
+- **Data Flow**: Streamlit → yfinance → Process → Display
+- **AI Enhancement**: Optional backend integration for advanced analysis
 
-### **Professional Dark Terminal Design**
-- **Dark Mode First**: Deep black panels with neon green accents
-- **Professional Typography**: JetBrains Mono font family
-- **Interactive Charts**: Plotly charts with dark terminal template
-- **Live Ticker Tape**: Rotating stock price updates
-- **Professional Cards**: Clean, organized layout with proper spacing
+### Key Components
+- **Data Fetching**: Direct yfinance calls for real-time data
+- **Metrics Calculation**: 1M/3M growth, volatility, Sharpe ratio
+- **Scoring Algorithm**: 67% traditional factors + 33% reputation factors
+- **AI Analysis**: Google Gemini integration for intelligent insights
 
-### **Stock Analysis Features**
-- **Universal Chart Search**: Search any stock for price charts
-- **Live Stock Prices**: Real-time price updates in 2 rows of 5
-- **Portfolio Analysis**: Comprehensive performance metrics
-- **Clickable Stocks**: Direct links to Yahoo Finance
-- **Professional Metrics**: Clean KPI displays with proper formatting
+## 🚀 Quick Start
 
-## How It Works
+### Prerequisites
+- Python 3.8+
+- pip package manager
+- Google Gemini API key (optional, for AI features)
 
-1. **Data Collection**: Fetches historical price data from Yahoo Finance with auto-adjustment
-2. **Factor Calculation**: Computes stock price growth, volatility, Sharpe ratio, and other metrics
-3. **Composite Scoring**: Weighted algorithm combining all factors with specific multipliers
-4. **AI Analysis**: Uses Gemini AI for intelligent insights and recommendations
-5. **Real-Time Updates**: Live data population on backend startup
-6. **Professional Display**: Dark terminal-style UI with professional theme
+### Installation
 
-## Tech Stack
-
-- **Python 3.11+**: Core application logic
-- **FastAPI**: RESTful API backend
-- **Streamlit**: Web interface and deployment
-- **Pandas & NumPy**: Data manipulation and analysis
-- **yfinance**: Real-time stock data (optimized)
-- **scikit-learn**: Statistical calculations and ML algorithms
-- **Plotly**: Interactive charts with dark terminal template
-- **Google Gemini AI**: Advanced AI analysis and recommendations
-- **Natural Language Processing**: News sentiment analysis and text processing
-- **Machine Learning**: Pattern recognition and risk modeling
-- **In-Memory Processing**: Simple, fast data management
-- **CSV Storage**: Lightweight data persistence
-
-## Project Structure
-
-```
-ai-daily-draft/
-├── app/                 # Backend application
-│   ├── main.py         # FastAPI backend
-│   ├── database.py     # Data fetching and processing
-│   ├── models.py       # Data models
-│   ├── gemini.py       # AI integration
-│   └── scraper.py      # News scraping
-├── frontend/           # Frontend application
-│   └── app.py          # Streamlit frontend (dark terminal theme)
-├── data/               # Static data files
-│   └── universes/      # Stock universe CSV files
-├── requirements.txt    # Python dependencies
-├── render.yaml         # Render deployment configuration
-├── env.template        # Environment template
-├── .gitignore         # Git ignore rules
-└── README.md          # Documentation
-```
-
-## Quick Start
-
-### **Local Development**
-
-1. **Clone and Setup**
+1. **Clone the repository**
    ```bash
-   git clone <your-repo>
+   git clone <repository-url>
    cd ai-daily-draft
+   ```
+
+2. **Install dependencies**
+   ```bash
    pip install -r requirements.txt
    ```
 
-2. **Configure Environment**
+3. **Set up environment variables**
    ```bash
    cp env.template .env
-   # Add your API keys to .env file:
-   # GEMINI_API_KEY=your_gemini_api_key_here
-   # NEWS_API_KEY=your_newsapi_key_here (optional)
-   # API_BASE_URL=https://quantsnap-backend.onrender.com
+   # Edit .env and add your API keys
    ```
 
-3. **Run the Application**
-   ```bash
-   # Backend
-   python3 app/main.py
-   
-   # Frontend
-   streamlit run frontend/app.py
-   ```
+### Running the Application
 
-### **Deploy to Render**
-
-1. **Prepare Repository**
-   ```bash
-   git add .
-   git commit -m "Ready for deployment"
-   git push origin main
-   ```
-
-2. **Deploy on Render**
-   - Connect your GitHub repository
-   - Use the `render.yaml` blueprint
-   - Set environment variables in Render dashboard
-   - Deploy!
-
-## Usage
-
-### **View Rankings**
-- See top-ranked stocks with professional dark terminal styling
-- View quantitative scores and performance metrics
-- Understand factor breakdowns with clear methodology
-
-### **Search Any Stock**
-- Enter any ticker symbol to analyze
-- Get instant factor calculations and AI insights
-- Compare with universe rankings
-
-### **Interactive Charts**
-- Search any stock for price charts
-- Multiple time periods (1M, 3M, 6M, 1Y, MAX)
-- Dark terminal-style charts
-
-### **Live Data**
-- Real-time stock prices for top 10 stocks
-- Live ticker tape with rotating updates
-- Professional metrics display
-
-## Configuration
-
-### **Environment Variables**
+#### Option 1: Frontend Only (Recommended)
 ```bash
-# Required for AI features
+streamlit run frontend/app.py
+```
+
+#### Option 2: Full Application with AI Backend
+```bash
+# Terminal 1: Start AI Backend
+python3 -m uvicorn app.main:app --reload
+
+# Terminal 2: Start Frontend
+streamlit run frontend/app.py
+```
+
+### Environment Variables
+
+Create a `.env` file with:
+```env
+# AI Configuration
 GEMINI_API_KEY=your_gemini_api_key_here
 
-# Optional
+# Backend Configuration (optional)
+BACKEND_URL=http://localhost:8000
+
+# Optional: News API
 NEWS_API_KEY=your_news_api_key_here
-API_BASE_URL=https://quantsnap-backend.onrender.com
 ```
 
-## Factor Model
+## 📊 Scoring Algorithm
 
-### **Quantitative Factors**
-- **1M Stock Price Growth**: 1-month price growth (30% weight)
-- **3M Stock Price Growth**: 3-month price growth (25% weight)
-- **Sharpe Ratio**: Risk-adjusted returns (20% weight) - multiplied by 2.0
-- **Volume Factor**: Trading activity (10% weight) - volume/1M * 0.1
-- **Market Cap**: Company size (10% weight) - market cap/1T * 0.1
-- **P/E Ratio**: Valuation metric (5% weight) - 1/(P/E + 1) * 0.05
+### Traditional Factors (67% Weight)
+- **1-Month Stock Price Growth** (40% of traditional)
+- **3-Month Stock Price Growth** (25% of traditional)
+- **Sharpe Ratio** (15% of traditional)
+- **Volume Factor** (10% of traditional)
+- **Market Cap Factor** (10% of traditional)
 
-### **Scoring Process**
-1. **Data Collection**: Historical price data from Yahoo Finance with auto-adjustment
-2. **Factor Calculation**: Compute all quantitative metrics
-3. **Composite Scoring**: Combine factors with optimized weights
-4. **Ranking**: Sort by composite score
-5. **Real-Time Updates**: Fresh data on every session
+### Reputation Factors (33% Weight)
+- **P/E Ratio Quality** (40% of reputation)
+- **Dividend Yield** (35% of reputation)
+- **Beta Stability** (25% of reputation)
 
-## AI/ML Integration
+### Performance Filters
+- **Severe Penalty (-90%)**: 1M growth < -5%
+- **Heavy Penalty (-70%)**: 1M growth < 0%
+- **Moderate Penalty (-30%)**: 1M growth < 2%
 
-### **Google Gemini AI Implementation**
-- **Intelligent Stock Analysis**: AI-powered analysis of individual stocks with comprehensive insights
-- **Risk Assessment**: Machine learning-based risk evaluation using multiple factors
-- **Investment Recommendations**: AI-generated buy/hold/sell recommendations based on quantitative and qualitative factors
-- **Market Context**: AI analysis of broader market conditions and sector trends
+## 🎨 UI Features
 
-### **Natural Language Processing**
-- **News Sentiment Analysis**: AI classification of news articles into positive, negative, or neutral sentiment
-- **Keyword Analysis**: Automatic detection of market-moving keywords in news content
-- **Contextual Understanding**: AI comprehension of financial news context and implications
-- **Automated Summaries**: AI-generated summaries of complex financial information
+- **Dark Theme**: Professional terminal-style interface
+- **Interactive Charts**: Plotly charts with multiple time periods
+- **Real-Time Updates**: Live data fetching on each session
+- **Responsive Design**: Optimized for desktop and mobile
+- **Custom Styling**: Bloomberg-inspired financial interface
 
-### **Machine Learning Features**
-- **Pattern Recognition**: AI identification of historical patterns and trends
-- **Anomaly Detection**: Machine learning detection of unusual market behavior
-- **Predictive Analytics**: AI-powered forecasting based on historical data patterns
-- **Risk Modeling**: ML-based risk assessment using multiple quantitative factors
+## 🔧 Technical Stack
 
-### **AI-Powered Insights**
-- **Performance Breakdown**: AI analysis of stock performance across multiple timeframes
-- **Sector Analysis**: Machine learning insights into sector-specific trends and opportunities
-- **Market Position Assessment**: AI evaluation of stock performance relative to market benchmarks
-- **Investment Thesis Generation**: AI-generated investment rationales and recommendations
+### Frontend
+- **Streamlit**: Web application framework
+- **yfinance**: Yahoo Finance data integration
+- **Plotly**: Interactive data visualization
+- **Pandas**: Data manipulation and analysis
+- **NumPy**: Numerical computations
 
-### **Technical Implementation**
-- **API Integration**: Seamless integration with Google Gemini AI API
-- **Rate Limiting**: Intelligent quota management to optimize API usage
-- **Error Handling**: Robust fallback mechanisms when AI services are unavailable
-- **Real-Time Processing**: Fast AI analysis with minimal latency
-- **Scalable Architecture**: AI services designed to handle multiple concurrent requests
+### Backend (Optional)
+- **FastAPI**: Lightweight API for AI analysis
+- **Google Gemini**: AI-powered stock analysis
+- **Pydantic**: Data validation
 
-### **Data Processing Pipeline**
-1. **Data Collection**: Real-time market data from Yahoo Finance
-2. **Feature Engineering**: Quantitative factor calculation and normalization
-3. **AI Analysis**: Gemini AI processing of stock data and market context
-4. **Sentiment Analysis**: AI classification of news sentiment
-5. **Recommendation Generation**: AI-powered investment insights
-6. **Risk Assessment**: ML-based risk evaluation and scoring
+### Data Sources
+- **Yahoo Finance**: Real-time stock data
+- **Auto-Adjustment**: Dividends and splits handled automatically
+- **500+ Stocks**: Comprehensive market coverage
 
-### **Code Implementation Examples**
+## 📈 Usage
 
-#### **67/33 Factor Breakdown Algorithm**
-```python
-# 67/33 Factor Breakdown: Traditional vs Reputation Factors
+1. **Select Stocks**: Choose from predefined list or add custom tickers
+2. **View Rankings**: See top performers with scores and metrics
+3. **Analyze Charts**: Interactive price charts with multiple timeframes
+4. **AI Insights**: Get AI-powered analysis for top stocks
+5. **Review Methodology**: Understand the scoring algorithm
 
-# Traditional Factors (67% weight) - Quantitative metrics
-traditional_score = (
-    (momentum_1m * 0.3) +      # 1M stock price growth (30% of traditional)
-    (momentum_3m * 0.2) +      # 3M stock price growth (20% of traditional)
-    (sharpe_ratio * 0.1) +     # Sharpe ratio (10% of traditional)
-    (volume_avg_20d / 1000000 * 0.04) + # Volume factor (4% of traditional)
-    (market_cap / 1e12 * 0.03) + # Market cap factor (3% of traditional)
-)
+## 🚀 Deployment
 
-# Reputation Factors (33% weight) - Qualitative metrics
-reputation_score = (
-    (1 / (pe_ratio + 1) * 0.15) + # P/E ratio quality (15% of reputation)
-    (dividend_yield * 0.1) +      # Dividend yield (10% of reputation)
-    (1 / (beta + 0.1) * 0.08)     # Beta stability (8% of reputation)
-)
+### Streamlit Cloud (Recommended)
+1. Push code to GitHub
+2. Connect repository to Streamlit Cloud
+3. Deploy with environment variables
 
-# Combine with 67/33 weighting
-score = (traditional_score * 0.67) + (reputation_score * 0.33)
+### Local Development
+```bash
+# Frontend only
+streamlit run frontend/app.py
+
+# Full application (two terminals)
+# Terminal 1: python3 -m uvicorn app.main:app --reload
+# Terminal 2: streamlit run frontend/app.py
 ```
 
-# Performance penalty for poor recent performance
-if momentum_1m < -10:  # If 1M growth is less than -10%
-    score *= 0.5  # Reduce score by 50%
-elif momentum_1m < 0:  # If 1M growth is negative but not too bad
-    score *= 0.8  # Reduce score by 20%
-
-# Convert to 0-100 scale for display
-score_100 = min(max(score * 10, 0), 100)
+### Backend (Optional)
+```bash
+cd app
+uvicorn main:app --reload
 ```
 
-#### **Enhanced News Sentiment Analysis**
-```python
-# Comprehensive AI-powered sentiment classification
-def classify_sentiment(content):
-    content = content.lower()
-    
-    # Extensive positive word dictionary
-    positive_words = [
-        'up', 'gain', 'rise', 'positive', 'strong', 'beat', 'surge', 'jump', 'climb', 'soar',
-        'rally', 'boost', 'increase', 'growth', 'profit', 'earnings', 'revenue', 'success',
-        'exceed', 'outperform', 'bullish', 'optimistic', 'favorable', 'promising', 'robust',
-        'solid', 'excellent', 'outstanding', 'impressive', 'record', 'high', 'peak', 'breakthrough',
-        'innovation', 'expansion', 'acquisition', 'merger', 'partnership', 'launch', 'upgrade',
-        'improve', 'enhance', 'strengthen', 'accelerate', 'momentum', 'recovery', 'rebound',
-        'turnaround', 'revival', 'resurgence', 'thrive', 'flourish', 'prosper', 'excel',
-        'dominate', 'lead', 'outpace', 'overtake', 'surpass', 'outstrip', 'outshine'
-    ]
-    
-    # Comprehensive negative word dictionary
-    negative_words = [
-        'down', 'fall', 'drop', 'negative', 'weak', 'miss', 'decline', 'plunge', 'crash',
-        'tumble', 'slump', 'dip', 'slide', 'sink', 'collapse', 'downturn', 'recession',
-        'loss', 'deficit', 'debt', 'bankruptcy', 'default', 'failure', 'struggle', 'challenge',
-        'risk', 'volatility', 'uncertainty', 'concern', 'worry', 'fear', 'anxiety', 'stress',
-        'pressure', 'tension', 'conflict', 'dispute', 'litigation', 'investigation', 'probe',
-        'scandal', 'controversy', 'criticism', 'backlash', 'boycott', 'protest', 'strike',
-        'layoff', 'firing', 'resignation', 'exit', 'departure', 'replacement', 'restructure',
-        'cut', 'reduce', 'decrease', 'shrink', 'contract', 'retreat', 'withdraw', 'abandon',
-        'cancel', 'delay', 'postpone', 'suspend', 'halt', 'stop', 'end', 'terminate'
-    ]
-    
-    # Count word frequency for sentiment analysis
-    positive_count = sum(1 for word in positive_words if word in content)
-    negative_count = sum(1 for word in negative_words if word in content)
-    
-    # Determine sentiment based on word frequency
-    if positive_count > negative_count and positive_count > 0:
-        return 'positive'
-    elif negative_count > positive_count and negative_count > 0:
-        return 'negative'
-    else:
-        return 'neutral'
+## 🔍 API Endpoints
 
-# Apply enhanced sentiment analysis to news articles
-for article in articles:
-    title = article.get('title', '').lower()
-    description = article.get('description', '').lower()
-    content = f"{title} {description}"
-    sentiment = classify_sentiment(content)
+### Backend Service (Optional)
+- `GET /health` - Service health check
+- `POST /analyze` - AI stock analysis
+- `GET /` - Service information
+
+### Testing the API
+```bash
+# Health check
+curl http://localhost:8000/health
+
+# AI analysis (requires running backend)
+curl -X POST http://localhost:8000/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"ticker":"AAPL","stock_data":{"score":7.8},"news_data":[]}'
 ```
 
-#### **Gemini AI Integration**
-```python
-class GeminiAI:
-    def __init__(self):
-        self.api_key = os.getenv('GEMINI_API_KEY')
-        genai.configure(api_key=self.api_key)
-        self.model = genai.GenerativeModel('gemini-pro')
-    
-    def analyze_stock(self, stock_data: Dict) -> str:
-        context = f"""
-        Stock: {stock_data.get('ticker')} - {stock_data.get('name')}
-        Price: ${stock_data.get('price'):.2f}
-        1M Growth: {stock_data.get('momentum_1m'):.2f}%
-        3M Growth: {stock_data.get('momentum_3m'):.2f}%
-        Sharpe Ratio: {stock_data.get('sharpe_ratio'):.2f}
-        """
-        
-        prompt = f"Analyze this stock data: {context}"
-        response = self.model.generate_content(prompt)
-        return response.text
+## 📝 Project Structure
+
+```
+ai-daily-draft/
+├── frontend/
+│   └── app.py              # Main Streamlit application
+├── app/
+│   ├── main.py             # FastAPI backend (AI only)
+│   └── gemini.py           # AI analysis module
+
+├── requirements.txt        # Python dependencies
+├── env.template           # Environment variables template
+└── README.md              # Project documentation
 ```
 
-#### **Quota Management**
-```python
-class QuotaManager:
-    def __init__(self, daily_limit: int = 45):
-        self.daily_limit = daily_limit
-        self.requests_today = 0
-    
-    def can_make_request(self) -> bool:
-        return self.requests_today < self.daily_limit
-    
-    def record_request(self):
-        self.requests_today += 1
-```
+## 🎯 Key Benefits
 
-## Investment Strategy
+- **Simplified Architecture**: No complex database or heavy backend processing
+- **Real-Time Data**: Direct yfinance integration for live market data
+- **AI Enhancement**: Optional backend for advanced analysis
+- **User-Friendly**: Clean, intuitive interface
+- **Cost-Effective**: Free tier compatible with minimal dependencies
 
-### **Score Interpretation (0-100 Scale)**
-- **Strong Buy (80-100)**: Excellent performance across all factors
-- **Buy (60-80)**: Good performance, worth considering
-- **Hold (40-60)**: Average performance, monitor closely
-- **Sell (20-40)**: Poor performance, avoid for now
-- **Strong Sell (0-20)**: Very poor performance, strong avoid
+## 🔮 Future Enhancements
 
-### **Risk Management**
-- **Diversification**: Spread across multiple sectors
-- **Risk-Adjusted Returns**: Prioritize Sharpe ratio
-- **Volume Analysis**: Ensure sufficient liquidity
-- **AI Validation**: Use AI insights for confirmation
+- **News Integration**: Real-time financial news with sentiment analysis
+- **Portfolio Tracking**: User portfolio management
+- **Advanced Charts**: Technical indicators and analysis tools
+- **Mobile App**: Native mobile application
+- **Social Features**: Community insights and sharing
 
-## Professional Design
+## 📄 License
 
-### **Dark Terminal Theme**
-- **Dark Mode**: Deep black backgrounds (#0B0F10)
-- **Neon Accents**: Green highlights (#00E676)
-- **Professional Typography**: JetBrains Mono font
-- **Clean Layout**: Organized cards with proper spacing
-- **Interactive Elements**: Hover effects and smooth transitions
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-### **Chart Styling**
-- **Dark Charts**: Dark terminal template
-- **White Text**: High contrast for readability
-- **Professional Colors**: Consistent color palette
-- **Smooth Animations**: Professional interactions
+## 🤝 Contributing
 
-## Security & Privacy
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
-- **No Personal Data**: App doesn't collect or store personal information
-- **API Key Security**: Environment variables for sensitive data
-- **Public Data**: Uses only publicly available market data
-- **No Trading**: Educational tool only, no actual trading
+## 📞 Support
 
-**Disclaimer**: This application is for educational purposes only. It does not constitute financial advice. Always do your own research and consult with financial professionals before making investment decisions.
+For questions or support, please open an issue on GitHub.
+
+---
+
+**Built with ❤️ using Streamlit, yfinance, and Google Gemini AI**
  

@@ -3,116 +3,66 @@
 QuantSnap - FastAPI Backend
 """
 
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
+from typing import Dict, List, Optional
 import os
 import logging
 from datetime import datetime
-from typing import List, Dict, Optional
-from fastapi import FastAPI, HTTPException, Query
-from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
-from dotenv import load_dotenv
-
-# Import our modules
-from database import Database
-from gemini import ai_analyzer
-from scraper import news_scraper, data_scraper
-from models import (
-    RankingResponse, StockResponse, UniverseResponse, 
-    PopulateResponse, HealthResponse, RootResponse,
-    AnalysisResponse
-)
-
-# Load environment variables
-load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Create FastAPI app
-app = FastAPI(title="QuantSnap API", version="1.0.0")
+# Initialize FastAPI app
+app = FastAPI(
+    title="QuantSnap AI Service",
+    description="AI-powered stock analysis service",
+    version="1.0.0"
+)
 
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        os.getenv("FRONTEND_URL", "http://localhost:8501"),
-        "https://quantsnap-frontend.onrender.com",
-        "https://quantsnap.onrender.com",
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=[
-        "Accept",
-        "Content-Type", 
-        "Authorization",
-        "X-Requested-With",
-        "X-CSRF-Token",
-        "Cache-Control",
-    ],
-    max_age=3600
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# Global database instance
-db = Database()
+# Pydantic models
+class HealthResponse(BaseModel):
+    """API health check response"""
+    status: str = Field(..., description="Service status")
+    timestamp: str = Field(..., description="Check timestamp")
+    message: Optional[str] = Field(default=None, description="Status message")
 
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
+class StockAnalysisRequest(BaseModel):
+    """Request for stock analysis"""
+    ticker: str = Field(..., description="Stock ticker symbol")
+    stock_data: Dict = Field(..., description="Stock metrics and data")
+    news_data: Optional[List[Dict]] = Field(default=None, description="Recent news articles")
 
-# Global database instance
-db = Database()
-data_ready = False
+class StockAnalysisResponse(BaseModel):
+    """AI analysis response"""
+    ticker: str = Field(..., description="Stock ticker")
+    analysis: str = Field(..., description="AI-generated analysis")
+    risk_level: str = Field(..., description="Risk assessment")
+    recommendation: str = Field(..., description="Investment recommendation")
+    confidence: float = Field(..., description="Analysis confidence score")
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize on startup - non-blocking"""
-    logger.info("QuantSnap API starting up...")
-    
-    # Start data loading in background
-    asyncio.create_task(load_data_background())
-
-async def load_data_background():
-    """Load data in background without blocking startup"""
-    global data_ready
-    try:
-        logger.info("Starting background data loading...")
-        rankings = db.update_all_data("world_top_stocks")
-        data_ready = True
-        logger.info(f"Background data loading complete: {len(rankings)} stocks ready")
-    except Exception as e:
-        logger.error(f"Background data loading failed: {e}")
-        data_ready = False
-
-@app.get("/", response_model=RootResponse)
-async def root():
-    """Root endpoint"""
-    return RootResponse(
-        name="QuantSnap API",
-        version="1.0.0",
-        description="Quantitative stock analysis API with 67/33 factor breakdown",
-        status="running"
-    )
-
+# Health check endpoint
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
-    """Health check with detailed status"""
+    """Health check endpoint"""
     try:
-        global data_ready
-        
-        # Check if data is ready
-        if data_ready:
-            status = "healthy"
-            message = "Data loaded and ready"
-        else:
-            status = "loading"
-            message = "Data loading in background"
-        
         current_time = datetime.now()
         
         return HealthResponse(
-            status=status,
+            status="healthy",
             timestamp=current_time.isoformat(),
-            message=message
+            message="AI service is ready"
         )
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
@@ -122,318 +72,103 @@ async def health_check():
             message="Health check failed"
         )
 
-@app.get("/rankings/{universe}", response_model=RankingResponse)
-async def get_rankings(
-    universe: str = "world_top_stocks",
-    limit: int = Query(10, description="Number of stocks to return", ge=1, le=500)
-):
-    """Get stock rankings for a universe with validation and caching"""
+# AI Analysis endpoint
+@app.post("/analyze", response_model=StockAnalysisResponse)
+async def analyze_stock(request: StockAnalysisRequest):
+    """Analyze a stock using AI"""
     try:
-        global data_ready
-        
-        # Check if data is still loading
-        if not data_ready:
-            logger.info("Data still loading, returning empty response")
-            return RankingResponse(
-                universe=universe,
-                count=0,
-                rankings=[]
-            )
-        
-        # Validate universe
-        valid_universes = ["world_top_stocks", "sp500", "nasdaq100"]
-        if universe not in valid_universes:
-            raise HTTPException(status_code=400, detail=f"Invalid universe. Must be one of: {valid_universes}")
-        
-        # Get rankings with error handling
-        rankings = db.get_rankings(universe, limit)
-        
-        if not rankings:
-            logger.warning(f"No rankings found for universe: {universe}")
-            return RankingResponse(
-                universe=universe,
-                count=0,
-                rankings=[]
-            )
-        
-        logger.info(f"Successfully fetched {len(rankings)} stock rankings for {universe}")
-        return RankingResponse(
-            universe=universe,
-            count=len(rankings),
-            rankings=rankings
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error getting rankings: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/stock/{ticker}", response_model=StockResponse)
-async def get_stock_data(ticker: str):
-    """Get individual stock data with validation"""
-    try:
-        # Validate ticker format
+        # Validate ticker
+        ticker = request.ticker.upper().strip()
         if not ticker or len(ticker) > 10:
             raise HTTPException(status_code=400, detail="Invalid ticker symbol")
         
-        ticker = ticker.upper().strip()
-        data = db.get_stock_data(ticker)
+        # Check if Gemini API key is available
+        if not os.getenv('GEMINI_API_KEY'):
+            raise HTTPException(status_code=503, detail="AI service not configured")
         
-        if not data:
-            raise HTTPException(status_code=404, detail=f"Stock {ticker} not found")
-        
-        logger.info(f"Successfully fetched data for {ticker}")
-        return StockResponse(stock=data)
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error getting stock data for {ticker}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/stock/{ticker}/analysis", response_model=AnalysisResponse)
-async def analyze_stock(ticker: str):
-    """Get comprehensive stock analysis with AI and news"""
-    try:
-        # Get stock data
-        stock_data = db.get_stock_data(ticker)
-        if not stock_data:
-            raise HTTPException(status_code=404, detail=f"Stock {ticker} not found")
-        
-        # Get news
-        news_data = news_scraper.fetch_stock_news(ticker, limit=3)
+        # Import Gemini analyzer
+        try:
+            from app.gemini import ai_analyzer
+        except ImportError:
+            raise HTTPException(status_code=503, detail="AI module not available")
         
         # Get AI analysis
-        ai_analysis = ai_analyzer.analyze_stock(stock_data, news_data)
+        stock_data = request.stock_data
+        stock_data['ticker'] = ticker
         
-        return AnalysisResponse(
+        ai_analysis = ai_analyzer.analyze_stock(stock_data, request.news_data)
+        
+        if not ai_analysis:
+            raise HTTPException(status_code=500, detail="AI analysis failed")
+        
+        # Calculate risk level and recommendation based on data
+        score = stock_data.get('score', 0)
+        momentum_1m = stock_data.get('momentum_1m', 0)
+        volatility = stock_data.get('volatility', 0)
+        
+        # Risk assessment
+        risk_score = 0
+        if momentum_1m < -10: risk_score += 3
+        elif momentum_1m < 0: risk_score += 2
+        elif momentum_1m < 5: risk_score += 1
+        
+        if volatility > 30: risk_score += 2
+        elif volatility > 20: risk_score += 1
+        
+        if score < 3: risk_score += 2
+        elif score < 5: risk_score += 1
+        
+        # Risk level
+        if risk_score <= 2:
+            risk_level = "Low Risk"
+        elif risk_score <= 4:
+            risk_level = "Medium Risk"
+        else:
+            risk_level = "High Risk"
+        
+        # Investment recommendation
+        if score >= 7:
+            recommendation = "Strong Buy"
+        elif score >= 5:
+            recommendation = "Buy"
+        elif score >= 3:
+            recommendation = "Hold"
+        else:
+            recommendation = "Avoid"
+        
+        # Confidence score (simplified)
+        confidence = min(score / 10.0, 1.0)
+        
+        logger.info(f"Successfully analyzed {ticker}")
+        
+        return StockAnalysisResponse(
             ticker=ticker,
-            stock_data=stock_data,
-            news=news_data,
-            ai_analysis=ai_analysis,
-            timestamp=datetime.now().isoformat()
+            analysis=ai_analysis,
+            risk_level=risk_level,
+            recommendation=recommendation,
+            confidence=confidence
         )
-    except Exception as e:
-        logger.error(f"Error analyzing stock {ticker}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/factors/traditional")
-async def get_traditional_factors():
-    """Get traditional factors data (67% weight)"""
-    try:
-        import pandas as pd
-        factors_file = db.traditional_factors_file
-        if factors_file.exists():
-            df = pd.read_csv(factors_file)
-            return {
-                "factors": df.to_dict('records'),
-                "count": len(df),
-                "weight": "67%",
-                "description": "Traditional quantitative factors including stock price growth, volatility, volume, and Sharpe ratio",
-                "timestamp": datetime.now().isoformat()
-            }
-        else:
-            raise HTTPException(status_code=404, detail="Traditional factors not found")
-    except Exception as e:
-        logger.error(f"Error getting traditional factors: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/factors/reputation")
-async def get_reputation_factors():
-    """Get reputation factors data (33% weight)"""
-    try:
-        import pandas as pd
-        factors_file = db.reputation_factors_file
-        if factors_file.exists():
-            df = pd.read_csv(factors_file)
-            return {
-                "factors": df.to_dict('records'),
-                "count": len(df),
-                "weight": "33%",
-                "description": "Reputation factors including financial health, market position, and growth stability",
-                "timestamp": datetime.now().isoformat()
-            }
-        else:
-            raise HTTPException(status_code=404, detail="Reputation factors not found")
-    except Exception as e:
-        logger.error(f"Error getting reputation factors: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/factors/breakdown")
-async def get_factor_breakdown():
-    """Get factor breakdown explanation"""
-    return {
-        "traditional_factors": {
-            "weight": "67%",
-            "components": {
-                "momentum_1m": "30% - 1-month stock price growth",
-                "momentum_3m": "20% - 3-month stock price growth", 
-                "sharpe_ratio": "10% - Risk-adjusted returns",
-                "volume": "4% - Trading volume",
-                "market_cap": "3% - Market capitalization"
-            },
-            "description": "Quantitative market performance indicators"
-        },
-        "reputation_factors": {
-            "weight": "33%",
-            "components": {
-                "pe_ratio": "15% - P/E ratio quality",
-                "dividend_yield": "10% - Dividend yield",
-                "beta": "8% - Beta stability"
-            },
-            "description": "Company fundamentals and stability indicators"
-        },
-        "composite_score": "Combined weighted score for final ranking"
-    }
-
-@app.get("/news/market")
-async def get_market_news():
-    """Get general market news"""
-    try:
-        news = news_scraper.fetch_market_news(limit=5)
-        return {
-            "news": news,
-            "count": len(news),
-            "timestamp": datetime.now().isoformat()
-        }
-    except Exception as e:
-        logger.error(f"Error fetching market news: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/news/{ticker}")
-async def get_stock_news(ticker: str, limit: int = Query(5, description="Number of news items")):
-    """Get news for a specific stock"""
-    try:
-        news = news_scraper.fetch_stock_news(ticker, limit)
-        return {
-            "ticker": ticker,
-            "news": news,
-            "count": len(news),
-            "timestamp": datetime.now().isoformat()
-        }
-    except Exception as e:
-        logger.error(f"Error fetching news for {ticker}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/sentiment/market")
-async def get_market_sentiment():
-    """Get market sentiment indicators"""
-    try:
-        sentiment = data_scraper.get_market_sentiment()
-        return sentiment
-    except Exception as e:
-        logger.error(f"Error getting market sentiment: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/sectors/performance")
-async def get_sector_performance():
-    """Get sector performance data"""
-    try:
-        sectors = data_scraper.scrape_sector_performance()
-        return {
-            "sectors": sectors,
-            "count": len(sectors),
-            "timestamp": datetime.now().isoformat()
-        }
-    except Exception as e:
-        logger.error(f"Error getting sector performance: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/prices/live")
-async def get_live_prices(tickers: str = Query(..., description="Comma-separated list of tickers")):
-    """Get live prices for multiple stocks"""
-    try:
-        ticker_list = [t.strip().upper() for t in tickers.split(',')]
-        price_data = db.get_live_prices(ticker_list)
         
-        return {
-            "prices": price_data,
-            "count": len(price_data),
-            "timestamp": datetime.now().isoformat()
-        }
-    except Exception as e:
-        logger.error(f"Error getting live prices: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/chart/{ticker}")
-async def get_chart_data(ticker: str, period: str = Query("1y", description="Chart period")):
-    """Get chart data for a stock with validation"""
-    try:
-        # Validate ticker and period
-        if not ticker or len(ticker) > 10:
-            raise HTTPException(status_code=400, detail="Invalid ticker symbol")
-        
-        valid_periods = ["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max"]
-        if period not in valid_periods:
-            raise HTTPException(status_code=400, detail=f"Invalid period. Must be one of: {valid_periods}")
-        
-        ticker = ticker.upper().strip()
-        chart_data = db.get_chart_data(ticker, period)
-        
-        if not chart_data:
-            raise HTTPException(status_code=404, detail=f"No chart data found for {ticker}")
-        
-        logger.info(f"Successfully fetched chart data for {ticker} ({period})")
-        return chart_data
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting chart data for {ticker}: {e}")
+        logger.error(f"Error analyzing stock {request.ticker}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/stocks/metadata")
-async def get_stocks_metadata():
-    """Get metadata about available stocks (similar to basketball scout's /players/names)"""
-    try:
-        # Get all available stocks with basic info
-        all_stocks = db.get_all_stocks_metadata()
-        
-        return {
-            "stocks": all_stocks,
-            "count": len(all_stocks),
-            "description": "Available stocks with ticker, name, and sector information",
-            "timestamp": datetime.now().isoformat()
+# Root endpoint
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {
+        "message": "QuantSnap AI Service",
+        "version": "1.0.0",
+        "status": "running",
+        "endpoints": {
+            "health": "/health",
+            "analyze": "/analyze"
         }
-    except Exception as e:
-        logger.error(f"Error getting stocks metadata: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/universes", response_model=UniverseResponse)
-async def get_universes():
-    """Get available universes"""
-    try:
-        universes = db.get_all_universes()
-        return UniverseResponse(universes=universes)
-    except Exception as e:
-        logger.error(f"Error getting universes: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/populate", response_model=PopulateResponse)
-async def populate_data():
-    """Update all stock data"""
-    try:
-        rankings = db.update_all_data("world_top_stocks")
-        return PopulateResponse(
-            status="success",
-            message=f"Updated {len(rankings)} stocks with 67/33 factor breakdown",
-            timestamp=datetime.now().isoformat()
-        )
-    except Exception as e:
-        logger.error(f"Error populating data: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/populate/{universe}", response_model=PopulateResponse)
-async def populate_universe(universe: str):
-    """Update stock data for specific universe"""
-    try:
-        rankings = db.update_all_data(universe)
-        return PopulateResponse(
-            status="success",
-            message=f"Updated {len(rankings)} stocks for {universe} with 67/33 factor breakdown",
-            timestamp=datetime.now().isoformat()
-        )
-    except Exception as e:
-        logger.error(f"Error populating universe {universe}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    }
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

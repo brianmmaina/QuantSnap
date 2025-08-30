@@ -1,36 +1,32 @@
 services:
-  # Frontend Service (Streamlit)
+  # QuantSnap Frontend (Streamlit)
   - type: web
     name: quantsnap-frontend
     env: python
     plan: free
-    buildCommand: pip install --no-cache-dir -r requirements.txt
+    buildCommand: pip install -r requirements.txt
     startCommand: streamlit run frontend/app.py --server.port $PORT --server.address 0.0.0.0
-    autoDeploy: false
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.0
-      - key: API_BASE_URL
-        value: https://quantsnap-backend.onrender.com
-      - key: FRONTEND_URL
-        value: https://quantsnap-frontend.onrender.com
-      - key: ENVIRONMENT
-        value: production
+        value: 3.9.16
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: NEWS_API_KEY
+        sync: false
+      - key: BACKEND_URL
+        value: https://quantsnap-ai-backend.onrender.com
 
-  # Backend Service (FastAPI)
+  # QuantSnap AI Backend (Optional)
   - type: web
-    name: quantsnap-backend
+    name: quantsnap-ai-backend
     env: python
     plan: free
-    buildCommand: pip install --no-cache-dir -r requirements.txt
-    startCommand: python app/main.py
-    autoDeploy: false
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.0
-      - key: BACKEND_URL
-        value: https://quantsnap-backend.onrender.com
-      - key: FRONTEND_URL
-        value: https://quantsnap-frontend.onrender.com
-      - key: ENVIRONMENT
-        value: production
+        value: 3.9.16
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: PORT
+        value: 8000
