@@ -781,18 +781,17 @@ if 'chart_period' not in st.session_state:
 # load stock rankings with clean api client
 with st.spinner("Loading stock rankings..."):
     # first check backend health
-    health_status = api_client.health_check()
-    if not health_status:
+    if not api_client.health_check():
         st.warning("⚠️ Backend is not responding, using local fallback data")
         df = get_local_fallback_data(50)
     else:
         # try to get data from backend
         rankings = api_client.get_rankings("world_top_stocks", 50)
-        if rankings and len(rankings) > 0:
+        if rankings:
             df = pd.DataFrame(rankings)
             st.sidebar.success(f"✅ Loaded {len(df)} stocks from backend")
         else:
-            st.info("🔄 Backend data still loading, using local fallback for now")
+            st.warning("⚠️ Backend returned no data, using local fallback")
             df = get_local_fallback_data(50)
 
 if df is not None and not df.empty:
@@ -952,6 +951,287 @@ if df is not None and not df.empty:
                       </div>
                     </a>
                     """, unsafe_allow_html=True)
+        
+        # AI Analysis Section
+        neon_divider("AI-POWERED ANALYSIS")
+        
+        # AI status with enhanced styling
+        ai_status = "AI Online" if os.getenv('GEMINI_API_KEY') else "AI Offline"
+        pulse_color = "var(--up)" if os.getenv('GEMINI_API_KEY') else "var(--warn)"
+        st.markdown(f"""
+        <style>
+        .chip{{ display:inline-flex; align-items:center; gap:8px; padding:6px 10px;
+          background:#0F1518; border:1px solid var(--border); border-radius:999px; }}
+        .pulse{{ width:8px; height:8px; border-radius:50%; background:{pulse_color};
+          box-shadow:0 0 0 0 rgba(0,230,118,.7); animation:pulse 1.6s infinite; }}
+        @keyframes pulse{{ 0%{{box-shadow:0 0 0 0 rgba(0,230,118,.7)}} 70%{{box-shadow:0 0 0 10px rgba(0,230,118,0)}} 100%{{box-shadow:0 0 0 0 rgba(0,230,118,0)}} }}
+        </style>
+        <div style='text-align:center;margin-bottom:16px'>
+          <div class='chip'><span class='pulse'></span><span>{ai_status}</span></div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # AI Analysis for Top 3 Stocks
+        if os.getenv('GEMINI_API_KEY'):
+            st.markdown("### 🤖 AI Investment Analysis")
+            st.markdown("*AI-powered analysis of top performing stocks*")
+            
+            # Analyze top 3 stocks with AI
+            top_3_tickers = top_tickers[:3]
+            
+            for i, ticker in enumerate(top_3_tickers):
+                with st.expander(f"📊 {ticker} - AI Analysis", expanded=(i==0)):
+                    # Get stock data for AI analysis
+                    stock_data = None
+                    if ticker in df.index:
+                        stock_data = df.loc[ticker].to_dict()
+                        stock_data['ticker'] = ticker
+                    
+                    if stock_data:
+                        # Get news for this stock
+                        news_data = fetch_news(ticker, limit=2)
+                        
+                        # Get AI analysis
+                        try:
+                            from app.gemini import ai_analyzer
+                            ai_analysis = ai_analyzer.analyze_stock(stock_data, news_data)
+                        except:
+                            ai_analysis = "AI analysis temporarily unavailable"
+                        
+                        # Display AI analysis
+                        col1, col2 = st.columns([2, 1])
+                        
+                        with col1:
+                            st.markdown("**🤖 AI Analysis:**")
+                            st.markdown(ai_analysis)
+                        
+                        with col2:
+                            # Risk assessment
+                            score = stock_data.get('score', 0)
+                            momentum_1m = stock_data.get('momentum_1m', 0)
+                            volatility = stock_data.get('volatility', 0)
+                            
+                            # Risk level calculation
+                            risk_score = 0
+                            if momentum_1m < -10: risk_score += 3
+                            elif momentum_1m < 0: risk_score += 2
+                            elif momentum_1m < 5: risk_score += 1
+                            
+                            if volatility > 30: risk_score += 2
+                            elif volatility > 20: risk_score += 1
+                            
+                            if score < 3: risk_score += 2
+                            elif score < 5: risk_score += 1
+                            
+                            # Risk level
+                            if risk_score <= 2:
+                                risk_level = "🟢 Low Risk"
+                                risk_color = "var(--up)"
+                            elif risk_score <= 4:
+                                risk_level = "🟡 Medium Risk"
+                                risk_color = "var(--warn)"
+                            else:
+                                risk_level = "🔴 High Risk"
+                                risk_color = "var(--down)"
+                            
+                            # Investment recommendation
+                            if score >= 7:
+                                recommendation = "🟢 Strong Buy"
+                                rec_color = "var(--up)"
+                            elif score >= 5:
+                                recommendation = "🟡 Buy"
+                                rec_color = "var(--warn)"
+                            elif score >= 3:
+                                recommendation = "⚪ Hold"
+                                rec_color = "var(--muted)"
+                            else:
+                                recommendation = "🔴 Avoid"
+                                rec_color = "var(--down)"
+                            
+                            st.markdown(f"""
+                            <div style="margin-bottom:16px;">
+                              <div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Risk Level</div>
+                              <div style="font-weight:700;color:{risk_color};">{risk_level}</div>
+                            </div>
+                            <div style="margin-bottom:16px;">
+                              <div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Recommendation</div>
+                              <div style="font-weight:700;color:{rec_color};">{recommendation}</div>
+                            </div>
+                            <div style="margin-bottom:16px;">
+                              <div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Score</div>
+                              <div style="font-weight:700;font-size:18px;">{score:.1f}/10</div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        
+                        # Show news if available
+                        if news_data:
+                            st.markdown("**📰 Recent News:**")
+                            for news in news_data:
+                                sentiment_color = {
+                                    'positive': 'var(--up)',
+                                    'negative': 'var(--down)',
+                                    'neutral': 'var(--muted)'
+                                }.get(news.get('sentiment', 'neutral'), 'var(--muted)')
+                                
+                                st.markdown(f"""
+                                <div style="margin-bottom:8px;padding:8px;background:#0F1518;border-radius:6px;">
+                                  <div style="font-size:12px;color:{sentiment_color};margin-bottom:4px;">
+                                    {news.get('sentiment', 'neutral').title()} • {news.get('source', 'Unknown')}
+                                  </div>
+                                  <div style="font-weight:600;font-size:14px;margin-bottom:4px;">
+                                    {news.get('title', 'No title')}
+                                  </div>
+                                  <div style="font-size:12px;color:var(--muted);">
+                                    {news.get('description', 'No description')}
+                                  </div>
+                                </div>
+                                """, unsafe_allow_html=True)
+        else:
+            st.markdown("### 🤖 AI Analysis Unavailable")
+            st.markdown("*Add your Gemini API key to enable AI-powered stock analysis*")
+            st.info("💡 **To enable AI features:** Add `GEMINI_API_KEY=your_key_here` to your environment variables")
+        
+        # Market Sentiment Analysis
+        st.markdown("### 📊 Market Sentiment")
+        
+        # Calculate overall market sentiment
+        positive_stocks = len(df[df['momentum_1m'] > 0])
+        negative_stocks = len(df[df['momentum_1m'] < 0])
+        total_stocks = len(df)
+        
+        sentiment_pct = (positive_stocks / total_stocks) * 100 if total_stocks > 0 else 0
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.markdown(f"""
+            <div class="card" style="text-align:center;">
+              <div class="section-title">BULLISH STOCKS</div>
+              <div style="font-size:24px;font-weight:800;color:var(--up);">{positive_stocks}</div>
+              <div style="font-size:12px;color:var(--muted);">{sentiment_pct:.1f}% of universe</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown(f"""
+            <div class="card" style="text-align:center;">
+              <div class="section-title">BEARISH STOCKS</div>
+              <div style="font-size:24px;font-weight:800;color:var(--down);">{negative_stocks}</div>
+              <div style="font-size:12px;color:var(--muted);">{100-sentiment_pct:.1f}% of universe</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            avg_score = df['score'].mean() if len(df) > 0 else 0
+            st.markdown(f"""
+            <div class="card" style="text-align:center;">
+              <div class="section-title">AVG SCORE</div>
+              <div style="font-size:24px;font-weight:800;color:var(--info);">{avg_score:.2f}</div>
+              <div style="font-size:12px;color:var(--muted);">out of 10</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Methodology Section
+        neon_divider("METHODOLOGY")
+        
+        st.markdown("### 📊 Scoring Algorithm")
+        st.markdown("*Our proprietary 67/33 factor breakdown combines quantitative and qualitative analysis*")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("#### 🔢 Traditional Factors (67% Weight)")
+            st.markdown("""
+            **Quantitative Performance Metrics:**
+            
+            • **1-Month Stock Price Growth** (40% of traditional)
+              - Recent momentum and short-term performance
+            
+            • **3-Month Stock Price Growth** (25% of traditional)
+              - Medium-term trend analysis
+            
+            • **Sharpe Ratio** (15% of traditional)
+              - Risk-adjusted returns over 3 months
+            
+            • **Volume Factor** (10% of traditional)
+              - Trading activity and liquidity
+            
+            • **Market Cap Factor** (10% of traditional)
+              - Company size and stability
+            """)
+        
+        with col2:
+            st.markdown("#### 🏆 Reputation Factors (33% Weight)")
+            st.markdown("""
+            **Qualitative Quality Metrics:**
+            
+            • **P/E Ratio Quality** (40% of reputation)
+              - Valuation attractiveness
+            
+            • **Dividend Yield** (35% of reputation)
+              - Income generation potential
+            
+            • **Beta Stability** (25% of reputation)
+              - Market correlation and volatility
+            """)
+        
+        # Score interpretation
+        st.markdown("#### 📈 Score Interpretation (0-10 Scale)")
+        
+        score_cols = st.columns(5)
+        
+        with score_cols[0]:
+            st.markdown("""
+            **🟢 Strong Buy (8-10)**
+            Excellent performance across all factors
+            """)
+        
+        with score_cols[1]:
+            st.markdown("""
+            **🟡 Buy (6-8)**
+            Good performance, worth considering
+            """)
+        
+        with score_cols[2]:
+            st.markdown("""
+            **⚪ Hold (4-6)**
+            Average performance, monitor closely
+            """)
+        
+        with score_cols[3]:
+            st.markdown("""
+            **🟠 Sell (2-4)**
+            Poor performance, avoid for now
+            """)
+        
+        with score_cols[4]:
+            st.markdown("""
+            **🔴 Strong Sell (0-2)**
+            Very poor performance, strong avoid
+            """)
+        
+        # Performance filters
+        st.markdown("#### ⚡ Performance Filters")
+        st.markdown("""
+        **Strict Quality Controls:**
+        
+        • **Severe Penalty (-90%)**: 1M growth < -5%
+        • **Heavy Penalty (-70%)**: 1M growth < 0%
+        • **Moderate Penalty (-30%)**: 1M growth < 2%
+        
+        *These filters ensure only quality stocks with positive momentum are recommended.*
+        """)
+        
+        # Data sources
+        st.markdown("#### 📊 Data Sources")
+        st.markdown("""
+        **Real-Time Market Data:**
+        
+        • **Yahoo Finance API**: Historical prices, company info, financial metrics
+        • **Auto-Adjustment**: Dividends and splits automatically accounted for
+        • **Daily Updates**: Fresh data on every session
+        • **500+ Stocks**: Comprehensive universe including US mega-caps and international stocks
+        """)
         
         neon_divider("MARKET CHARTS")
         
