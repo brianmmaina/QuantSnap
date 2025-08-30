@@ -29,7 +29,11 @@ st.set_page_config(
 def fetch_news(ticker=None, limit=4):
     """Fetch news using multiple sources with proper cleaning and fallbacks"""
     try:
-        news_api_key = os.getenv('NEWS_API_KEY')
+        # Try Streamlit secrets first, then fallback to environment variables
+        try:
+            news_api_key = st.secrets["NEWS_API_KEY"]
+        except:
+            news_api_key = os.getenv('NEWS_API_KEY')
         
         # try newsapi first if key is available
         if news_api_key:
@@ -330,6 +334,7 @@ html, body, [data-testid="stAppViewContainer"]{
   text-transform: uppercase;
   font-family: 'JetBrains Mono', monospace;
   padding-bottom: 8px;
+  border-bottom: 2px solid var(--border);
 }
 
 .badge{
@@ -972,8 +977,13 @@ if df is not None and not df.empty:
     neon_divider("STOCK ANALYSIS")
     
     # AI Status
-    ai_status = "AI Online" if os.getenv('GEMINI_API_KEY') else "AI Offline"
-    pulse_color = "var(--up)" if os.getenv('GEMINI_API_KEY') else "var(--warn)"
+    try:
+        gemini_key = st.secrets["GEMINI_API_KEY"]
+    except:
+        gemini_key = os.getenv('GEMINI_API_KEY')
+    
+    ai_status = "AI Online" if gemini_key else "AI Offline"
+    pulse_color = "var(--up)" if gemini_key else "var(--warn)"
     st.markdown(f"""
     <style>
     .chip{{ display:inline-flex; align-items:center; gap:8px; padding:6px 10px;
@@ -1248,7 +1258,7 @@ if df is not None and not df.empty:
     
     st.markdown("""
     <div style="margin-bottom: 20px;">
-        <h4 style="color: var(--accent); margin-bottom: 12px;">Scoring Algorithm (0-10 Scale)</h4>
+        <h4 style="color: var(--text); margin-bottom: 12px;">Scoring Algorithm (0-10 Scale)</h4>
         <p style="color: var(--text); line-height: 1.6; margin-bottom: 16px;">
             QuantSnap uses a sophisticated 67/33 weighted scoring system to rank stocks based on both traditional financial metrics and quality factors.
         </p>
@@ -1260,7 +1270,7 @@ if df is not None and not df.empty:
     
     with col1:
         st.markdown("""
-        <h5 style="color: var(--up); margin-bottom: 8px;">Traditional Factors (67% Weight)</h5>
+        <h5 style="color: var(--text); margin-bottom: 8px;">Traditional Factors (67% Weight)</h5>
         <ul style="color: var(--text); line-height: 1.5; font-size: 14px;">
             <li><strong>1-Month Growth (40%):</strong> Recent price performance over 30 calendar days</li>
             <li><strong>3-Month Growth (25%):</strong> Medium-term price performance over 90 calendar days</li>
@@ -1272,7 +1282,7 @@ if df is not None and not df.empty:
     
     with col2:
         st.markdown("""
-        <h5 style="color: var(--info); margin-bottom: 8px;">Quality Factors (33% Weight)</h5>
+        <h5 style="color: var(--text); margin-bottom: 8px;">Quality Factors (33% Weight)</h5>
         <ul style="color: var(--text); line-height: 1.5; font-size: 14px;">
             <li><strong>Volatility Quality:</strong> Lower volatility = higher quality score</li>
             <li><strong>Consistency:</strong> Stable performance patterns</li>
@@ -1282,7 +1292,7 @@ if df is not None and not df.empty:
     
     st.markdown("""
     <div style="margin-bottom: 20px;">
-        <h5 style="color: var(--warn); margin-bottom: 8px;">Performance Filters</h5>
+        <h5 style="color: var(--text); margin-bottom: 8px;">Performance Filters</h5>
         <p style="color: var(--text); line-height: 1.6; font-size: 14px;">
             Stocks with poor recent performance receive penalties to ensure quality:
         </p>
@@ -1295,8 +1305,8 @@ if df is not None and not df.empty:
     """, unsafe_allow_html=True)
     
     st.markdown("""
-    <div style="background: rgba(0,230,118,.05); border-left: 4px solid var(--up); padding: 16px; border-radius: 8px;">
-        <h5 style="color: var(--up); margin-bottom: 8px;">Data Sources</h5>
+    <div style="background: rgba(255,255,255,.02); border-left: 4px solid var(--border); padding: 16px; border-radius: 8px;">
+        <h5 style="color: var(--text); margin-bottom: 8px;">Data Sources</h5>
         <p style="color: var(--text); line-height: 1.6; font-size: 14px; margin-bottom: 0;">
             All data is sourced directly from <strong>Yahoo Finance</strong> via yfinance, ensuring real-time accuracy. 
             The app analyzes 500+ stocks and ranks the top 10 based on our proprietary scoring algorithm. 
