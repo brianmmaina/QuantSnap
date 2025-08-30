@@ -865,7 +865,12 @@ if df is not None and not df.empty:
                     yaxis_title="Price ($)",
                     height=400,
                     showlegend=False,
-                    hovermode='x unified'
+                    hovermode='x unified',
+                    paper_bgcolor="#0B0F10",
+                    plot_bgcolor="#0B0F10",
+                    font=dict(color="#D7E1E8"),
+                    xaxis=dict(gridcolor="#1C2328", zerolinecolor="#1C2328", linecolor="#2A3338", tickcolor="#2A3338"),
+                    yaxis=dict(gridcolor="#1C2328", zerolinecolor="#1C2328", linecolor="#2A3338", tickcolor="#2A3338")
                 )
                 
                 st.plotly_chart(fig, use_container_width=True, theme=None)
@@ -876,15 +881,60 @@ if df is not None and not df.empty:
                 change = current_price - start_price
                 change_pct = (change / start_price) * 100
                 
+                # Custom styling for metrics
+                st.markdown("""
+                <style>
+                .metric-container {
+                    background: var(--panel);
+                    border: 1px solid var(--border);
+                    border-radius: 12px;
+                    padding: 16px;
+                    margin: 8px 0;
+                }
+                .metric-label {
+                    color: var(--muted) !important;
+                    font-size: 14px !important;
+                    font-weight: 600 !important;
+                    margin-bottom: 8px !important;
+                }
+                .metric-value {
+                    color: var(--text) !important;
+                    font-size: 24px !important;
+                    font-weight: 700 !important;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+                
                 col1, col2, col3, col4 = st.columns(4)
                 with col1:
-                    st.metric("Current Price", f"${current_price:.2f}")
+                    st.markdown(f"""
+                    <div class="metric-container">
+                        <div class="metric-label">Current Price</div>
+                        <div class="metric-value">${current_price:.2f}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
                 with col2:
-                    st.metric("Change", f"${change:+.2f}")
+                    change_class = "c-up" if change >= 0 else "c-down"
+                    st.markdown(f"""
+                    <div class="metric-container">
+                        <div class="metric-label">Change</div>
+                        <div class="metric-value {change_class}">${change:+.2f}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
                 with col3:
-                    st.metric("Change %", f"{change_pct:+.2f}%")
+                    st.markdown(f"""
+                    <div class="metric-container">
+                        <div class="metric-label">Change %</div>
+                        <div class="metric-value {change_class}">{change_pct:+.2f}%</div>
+                    </div>
+                    """, unsafe_allow_html=True)
                 with col4:
-                    st.metric("Period", period_name)
+                    st.markdown(f"""
+                    <div class="metric-container">
+                        <div class="metric-label">Period</div>
+                        <div class="metric-value">{period_name}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
                     
             else:
                 st.markdown('<div class="alert alert-warning">Insufficient price data for chart</div>', unsafe_allow_html=True)

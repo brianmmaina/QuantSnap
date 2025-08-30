@@ -6,6 +6,12 @@ A professional stock analysis application built with Streamlit and yfinance, fea
 
 QuantSnap provides comprehensive stock analysis using a proprietary scoring algorithm that evaluates stocks based on traditional financial metrics and quality factors. The application analyzes 500+ stocks and ranks the top performers using real-time data from Yahoo Finance.
 
+## Live Demo
+
+**[Try QuantSnap Live](https://quantsnap.streamlit.app)**
+
+Experience the full application with real-time data and analysis.
+
 ## Features
 
 - **Real-Time Stock Data**: Direct integration with Yahoo Finance API
