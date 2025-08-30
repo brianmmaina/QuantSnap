@@ -283,13 +283,7 @@ bloomberg_template = dict(
 pio.templates["bloomberg"] = bloomberg_template
 pio.templates.default = "bloomberg"
 
-# page configuration
-st.set_page_config(
-    page_title="QuantSnap - Stock Rankings",
-    page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
+# page configuration already set above
 
 # bloomberg terminal theme
 st.markdown("""
