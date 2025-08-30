@@ -97,7 +97,7 @@ async def analyze_stock(request: StockAnalysisRequest):
         stock_data['ticker'] = ticker
         
         ai_analysis = ai_analyzer.analyze_stock(stock_data, request.news_data)
-        
+        e 
         if not ai_analysis:
             raise HTTPException(status_code=500, detail="AI analysis failed")
         
