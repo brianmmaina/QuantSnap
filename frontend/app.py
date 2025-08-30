@@ -708,7 +708,7 @@ if df is not None and not df.empty:
       <div class="section-title">AVG 3M RETURN</div>
       <div style="font-size:28px;font-weight:800" class="c-info">{df['pct_change_3m'].mean():.1f}%</div>
     </div>""", unsafe_allow_html=True)
-    ha
+    
     neon_divider("TOP PERFORMERS")
     
     try:
