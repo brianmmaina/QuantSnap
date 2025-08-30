@@ -28,10 +28,28 @@ ENV/
 env.bak/
 venv.bak/
 
-# Environment variables
+# Environment variables and secrets
 .env
 .env.local
 .env.production
+.env.staging
+.env.backup
+.env.*
+*.env
+secrets.json
+config.json
+*.key
+*.pem
+*.p12
+*.pfx
+
+# API Keys and secrets
+api_keys.txt
+credentials.json
+service_account.json
+token.json
+.secrets
+.secret
 
 # IDE
 .vscode/
@@ -61,6 +79,12 @@ logs/
 *.temp
 .cache/
 
-# API keys and secrets
-*.key
-secrets.json
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.bak
+*.backup
+*~
