@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 # load environment variables
 load_dotenv()
 
-# streamlit configuration
+# streamlit configuration - must be first streamlit command
 st.set_page_config(
     page_title="QuantSnap - AI Stock Analysis",
     page_icon="📈",
@@ -283,13 +283,7 @@ bloomberg_template = dict(
 pio.templates["bloomberg"] = bloomberg_template
 pio.templates.default = "bloomberg"
 
-# page configuration
-st.set_page_config(
-    page_title="QuantSnap - Stock Rankings",
-    page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
+# page configuration already set at top
 
 # bloomberg terminal theme
 st.markdown("""
