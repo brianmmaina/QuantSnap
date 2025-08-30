@@ -48,6 +48,7 @@ class HealthResponse(BaseModel):
     """API health check response"""
     status: str = Field(..., description="Service status")
     timestamp: str = Field(..., description="Check timestamp")
+    message: Optional[str] = Field(default=None, description="Status message")
 
 class RootResponse(BaseModel):
     """API root response"""

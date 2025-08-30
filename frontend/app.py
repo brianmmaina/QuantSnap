@@ -781,17 +781,18 @@ if 'chart_period' not in st.session_state:
 # load stock rankings with clean api client
 with st.spinner("Loading stock rankings..."):
     # first check backend health
-    if not api_client.health_check():
+    health_status = api_client.health_check()
+    if not health_status:
         st.warning("⚠️ Backend is not responding, using local fallback data")
         df = get_local_fallback_data(50)
     else:
         # try to get data from backend
         rankings = api_client.get_rankings("world_top_stocks", 50)
-        if rankings:
+        if rankings and len(rankings) > 0:
             df = pd.DataFrame(rankings)
             st.sidebar.success(f"✅ Loaded {len(df)} stocks from backend")
         else:
-            st.warning("⚠️ Backend returned no data, using local fallback")
+            st.info("🔄 Backend data still loading, using local fallback for now")
             df = get_local_fallback_data(50)
 
 if df is not None and not df.empty:

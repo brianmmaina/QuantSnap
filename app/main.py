@@ -56,15 +56,32 @@ app.add_middleware(
 # Global database instance
 db = Database()
 
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+
+# Global database instance
+db = Database()
+data_ready = False
+
 @app.on_event("startup")
 async def startup_event():
-    """Initialize on startup"""
+    """Initialize on startup - non-blocking"""
     logger.info("QuantSnap API starting up...")
     
-    # Update all data on startup
-    logger.info("Updating all stock data with yfinance...")
-    rankings = db.update_all_data("world_top_stocks")
-    logger.info(f"Updated {len(rankings)} stocks with enhanced yfinance data")
+    # Start data loading in background
+    asyncio.create_task(load_data_background())
+
+async def load_data_background():
+    """Load data in background without blocking startup"""
+    global data_ready
+    try:
+        logger.info("Starting background data loading...")
+        rankings = db.update_all_data("world_top_stocks")
+        data_ready = True
+        logger.info(f"Background data loading complete: {len(rankings)} stocks ready")
+    except Exception as e:
+        logger.error(f"Background data loading failed: {e}")
+        data_ready = False
 
 @app.get("/", response_model=RootResponse)
 async def root():
@@ -80,23 +97,29 @@ async def root():
 async def health_check():
     """Health check with detailed status"""
     try:
-        # Check if database is working
-        test_rankings = db.get_rankings("world_top_stocks", 1)
-        db_status = "healthy" if test_rankings else "degraded"
+        global data_ready
         
-        # Check if we have recent data
+        # Check if data is ready
+        if data_ready:
+            status = "healthy"
+            message = "Data loaded and ready"
+        else:
+            status = "loading"
+            message = "Data loading in background"
+        
         current_time = datetime.now()
-        status = "healthy" if db_status == "healthy" else "degraded"
         
         return HealthResponse(
             status=status,
-            timestamp=current_time.isoformat()
+            timestamp=current_time.isoformat(),
+            message=message
         )
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
         return HealthResponse(
             status="unhealthy",
-            timestamp=datetime.now().isoformat()
+            timestamp=datetime.now().isoformat(),
+            message="Health check failed"
         )
 
 @app.get("/rankings/{universe}", response_model=RankingResponse)
@@ -106,6 +129,17 @@ async def get_rankings(
 ):
     """Get stock rankings for a universe with validation and caching"""
     try:
+        global data_ready
+        
+        # Check if data is still loading
+        if not data_ready:
+            logger.info("Data still loading, returning empty response")
+            return RankingResponse(
+                universe=universe,
+                count=0,
+                rankings=[]
+            )
+        
         # Validate universe
         valid_universes = ["world_top_stocks", "sp500", "nasdaq100"]
         if universe not in valid_universes:
