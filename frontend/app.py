@@ -696,18 +696,26 @@ try:
                     debug_info.append(f"Fetching {ticker}...")
                     data = fetch_stock_data_simple(ticker, "1mo")  # use simple version for debugging
                     
-                    if data is not None and not data.empty and len(data) > 10:
-                        debug_info.append(f"✓ {ticker}: Got {len(data)} rows")
-                        metrics = calculate_metrics(data)
-                        if metrics:
-                            metrics['ticker'] = ticker
-                            metrics['score'] = calculate_score(metrics)
-                            all_metrics[ticker] = metrics
-                            debug_info.append(f"✓ {ticker}: Calculated score {metrics['score']:.2f}")
-                        else:
-                            debug_info.append(f"✗ {ticker}: Metrics calculation failed")
+                    # detailed debugging
+                    if data is None:
+                        debug_info.append(f"✗ {ticker}: Data is None")
+                    elif data.empty:
+                        debug_info.append(f"✗ {ticker}: Data is empty")
                     else:
-                        debug_info.append(f"✗ {ticker}: No data or insufficient data")
+                        debug_info.append(f"✓ {ticker}: Got data with {len(data)} rows, columns: {list(data.columns)}")
+                        debug_info.append(f"  First few rows: {data.head(2).to_dict()}")
+                        
+                        if len(data) > 10:
+                            metrics = calculate_metrics(data)
+                            if metrics:
+                                metrics['ticker'] = ticker
+                                metrics['score'] = calculate_score(metrics)
+                                all_metrics[ticker] = metrics
+                                debug_info.append(f"✓ {ticker}: Calculated score {metrics['score']:.2f}")
+                            else:
+                                debug_info.append(f"✗ {ticker}: Metrics calculation failed")
+                        else:
+                            debug_info.append(f"✗ {ticker}: Only {len(data)} rows, need >10")
                 except Exception as e:
                     debug_info.append(f"✗ {ticker}: Error - {str(e)}")
             
