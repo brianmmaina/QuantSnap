@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # Configuration
 DATA_DIR = Path(__file__).parent.parent / "data" / "raw" / "stocks"
 REQUIRED_COLUMNS = ['Date', 'Open', 'High', 'Low', 'Close', 'Volume']
-MIN_VOLUME_THRESHOLD = 100000  # Minimum average daily volume for liquid stocks
+MIN_VOLUME_THRESHOLD = 500000  # Minimum average daily volume (500K shares)
 MIN_ROWS_EXPECTED = 700  # Minimum rows expected for 3 years (accounting for holidays)
 
 
@@ -140,7 +140,79 @@ class DataValidator:
         max_date = df['Date'].max()
         checks['date_range'] = {'min': str(min_date), 'max': str(max_date)}
         
+        # Check for missing dates (data gaps)
+        date_gaps = self._find_date_gaps(df)
+        if date_gaps:
+            checks['date_gaps'] = date_gaps
+            checks['has_date_gaps'] = True
+        else:
+            checks['has_date_gaps'] = False
+        
         return checks
+    
+    def _find_date_gaps(self, df: pd.DataFrame) -> List[Dict]:
+        """
+        Find gaps in trading dates (missing business days).
+        
+        Args:
+            df: DataFrame with Date column
+        
+        Returns:
+            List of dictionaries describing gaps
+        """
+        gaps = []
+        
+        if len(df) < 2:
+            return gaps
+        
+        # Generate expected business days (Mon-Fri)
+        date_range = pd.date_range(
+            start=df['Date'].min(),
+            end=df['Date'].max(),
+            freq='B'  # Business days
+        )
+        
+        # Find missing dates (exclude weekends and compare with actual data)
+        actual_dates = set(df['Date'].dt.date)
+        expected_dates = set(date_range.date)
+        missing_dates = expected_dates - actual_dates
+        
+        if missing_dates:
+            # Group consecutive missing dates into gaps
+            sorted_missing = sorted(missing_dates)
+            
+            if sorted_missing:
+                gap_start = sorted_missing[0]
+                gap_end = sorted_missing[0]
+                
+                for i in range(1, len(sorted_missing)):
+                    # Check if dates are consecutive business days
+                    days_diff = (sorted_missing[i] - gap_end).days
+                    
+                    if days_diff <= 3:  # Allow for weekends
+                        gap_end = sorted_missing[i]
+                    else:
+                        # Save previous gap
+                        gap_size = len([d for d in sorted_missing if gap_start <= d <= gap_end])
+                        if gap_size > 5:  # Only report significant gaps (> 1 week)
+                            gaps.append({
+                                'start': str(gap_start),
+                                'end': str(gap_end),
+                                'missing_days': gap_size
+                            })
+                        gap_start = sorted_missing[i]
+                        gap_end = sorted_missing[i]
+                
+                # Save last gap
+                gap_size = len([d for d in sorted_missing if gap_start <= d <= gap_end])
+                if gap_size > 5:
+                    gaps.append({
+                        'start': str(gap_start),
+                        'end': str(gap_end),
+                        'missing_days': gap_size
+                    })
+        
+        return gaps
     
     def _validate_prices(self, df: pd.DataFrame) -> Dict:
         """Validate price data."""
@@ -316,6 +388,35 @@ class DataValidator:
                 print(f"\n{ticker}:")
                 for warning in result['warnings']:
                     print(f"  ⚠️  {warning}")
+        
+        # Print data gap information
+        stocks_with_gaps = [
+            ticker for ticker, result in summary['results'].items()
+            if result.get('checks', {}).get('has_date_gaps', False)
+        ]
+        
+        if stocks_with_gaps:
+            print("\nData Gaps Detected:")
+            for ticker in stocks_with_gaps:
+                result = summary['results'][ticker]
+                gaps = result['checks'].get('date_gaps', [])
+                if gaps:
+                    print(f"\n{ticker}: {len(gaps)} gap(s) found")
+                    for gap in gaps[:3]:  # Show first 3 gaps
+                        print(f"  📅 {gap['start']} to {gap['end']} ({gap['missing_days']} days)")
+                    if len(gaps) > 3:
+                        print(f"  ... and {len(gaps) - 3} more gap(s)")
+        
+        # Print volume statistics
+        print("\nVolume Statistics:")
+        print("-" * 60)
+        for ticker, result in summary['results'].items():
+            if result.get('checks', {}).get('avg_volume'):
+                avg_vol = result['checks']['avg_volume']
+                meets_threshold = result['checks'].get('meets_volume_threshold', False)
+                status = "✓" if meets_threshold else "✗"
+                print(f"  {ticker}: {avg_vol:>12,.0f} shares/day {status}")
+
 
 
 def main():
