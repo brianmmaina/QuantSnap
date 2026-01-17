@@ -97,12 +97,25 @@ STOCK_UNIVERSE: List[str] = [
 
 
 # ============================================================================
-# UNIVERSE METADATA
+# BENCHMARK TICKERS
 # ============================================================================
+
+BENCHMARK_TICKERS: List[str] = [
+    "SPY",  # S&P 500 ETF - Market benchmark for cross-asset features
+]
+
+
+# ============================================================================
+# ALL TICKERS (Stocks + Benchmarks)
+# ============================================================================
+
+ALL_TICKERS = STOCK_UNIVERSE + BENCHMARK_TICKERS
 
 UNIVERSE_METADATA: Dict = {
     "total_stocks": len(STOCK_UNIVERSE),
-    "last_updated": "2026-01-16",
+    "benchmark_tickers": len(BENCHMARK_TICKERS),
+    "total_tickers": len(ALL_TICKERS),
+    "last_updated": "2026-01-17",
     "review_frequency": "monthly",
     "min_daily_volume": 500_000,  # shares
     "min_market_cap": 10_000_000_000,  # $10B USD
@@ -180,6 +193,26 @@ def get_universe() -> List[str]:
         List of ticker symbols
     """
     return STOCK_UNIVERSE.copy()
+
+
+def get_benchmark_tickers() -> List[str]:
+    """
+    Get benchmark tickers (used for cross-asset features).
+    
+    Returns:
+        List of benchmark ticker symbols
+    """
+    return BENCHMARK_TICKERS.copy()
+
+
+def get_all_tickers() -> List[str]:
+    """
+    Get all tickers (stocks + benchmarks).
+    
+    Returns:
+        List of all ticker symbols
+    """
+    return ALL_TICKERS.copy()
 
 
 def get_universe_size() -> int:
@@ -269,7 +302,14 @@ if __name__ == "__main__":
     
     validation = validate_universe()
     print(f"\nTotal Stocks: {validation['total_stocks']}")
+    print(f"Benchmark Tickers: {len(BENCHMARK_TICKERS)}")
+    print(f"Total Tickers: {len(ALL_TICKERS)}")
     print(f"Valid Configuration: {'✓' if validation['valid'] else '✗'}")
+    
+    print(f"\nBenchmark Tickers:")
+    print("-" * 50)
+    for ticker in BENCHMARK_TICKERS:
+        print(f"  {ticker:<10} (Market benchmark for cross-asset features)")
     
     print(f"\nSector Allocation:")
     print("-" * 50)
